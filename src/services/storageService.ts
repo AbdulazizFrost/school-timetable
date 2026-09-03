@@ -189,6 +189,105 @@ export const storageService = {
     return data;
   },
 
+  /**
+   * Save an automatic local snapshot before any dangerous or sync operation
+   */
+  saveAutoSnapshot: (
+    reason: string,
+    data: {
+      teachers: Teacher[];
+      classes: SchoolClass[];
+      subjects: Subject[];
+      rooms: Classroom[];
+      settings: ScheduleSettings;
+      schedule?: Schedule | null;
+    }
+  ) => {
+    try {
+      const KEY = 'school_timetable_auto_backups_v1';
+      const existing = localStorage.getItem(KEY);
+      let backups: any[] = existing ? JSON.parse(existing) : [];
+
+      const newBackup = {
+        id: `snap_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        reason,
+        teachersCount: data.teachers.length,
+        data,
+      };
+
+      // Keep latest 15 snapshots
+      backups = [newBackup, ...backups.slice(0, 14)];
+      localStorage.setItem(KEY, JSON.stringify(backups));
+    } catch {}
+  },
+
+  /**
+   * Get all automatic local snapshots
+   */
+  getAutoSnapshots: () => {
+    try {
+      const KEY = 'school_timetable_auto_backups_v1';
+      const existing = localStorage.getItem(KEY);
+      return existing ? JSON.parse(existing) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Recover any teachers that were added earlier and logged in the Audit Log
+   */
+  recoverTeachersFromAuditLogs: (
+    currentTeachers: Teacher[],
+    subjects: Subject[]
+  ): { recovered: Teacher[]; totalAdded: number } => {
+    try {
+      const AUDIT_KEY = 'school_timetable_audit_log_v1';
+      const raw = localStorage.getItem(AUDIT_KEY);
+      if (!raw) return { recovered: [], totalAdded: 0 };
+
+      const logs: any[] = JSON.parse(raw);
+      const existingNames = new Set(currentTeachers.map((t) => t.fullName.toLowerCase().trim()));
+      const recovered: Teacher[] = [];
+
+      const defaultSubId = subjects[0]?.id || 'matematika';
+
+      logs.forEach((log) => {
+        if (
+          log.description &&
+          (log.description.includes('Добавлен учитель') || log.title?.includes('Добавлен преподаватель'))
+        ) {
+          // Format: "Добавлен учитель Имя Фамилия (2 предметов)" or similar
+          let name = '';
+          const matchWithBrackets = log.description.match(/Добавлен учитель\s+([^(]+)/);
+          if (matchWithBrackets && matchWithBrackets[1]) {
+            name = matchWithBrackets[1].trim();
+          } else {
+            const parts = log.description.split('Добавлен учитель');
+            if (parts[1]) name = parts[1].trim();
+          }
+
+          if (name && !existingNames.has(name.toLowerCase())) {
+            existingNames.add(name.toLowerCase());
+            recovered.push({
+              id: `tch_rec_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              fullName: name,
+              subjectIds: [defaultSubId],
+              weeklyLoad: 20,
+              maxLessonsPerDay: 5,
+              availability: {},
+            });
+          }
+        }
+      });
+
+      return { recovered, totalAdded: recovered.length };
+    } catch {
+      return { recovered: [], totalAdded: 0 };
+    }
+  },
+
   clearAll: () => {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
   },

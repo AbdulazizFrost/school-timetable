@@ -57,6 +57,7 @@ interface SchoolState {
   loadDemoData: () => void;
   clearAllData: () => void;
   importProject: (data: ProjectBackupData) => void;
+  recoverTeachersFromAudit: () => number;
 }
 
 const rawLoadedTeachers = storageService.loadTeachers();
@@ -589,20 +590,59 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
       validation,
     });
   },
+
+  recoverTeachersFromAudit: () => {
+    const currentTeachers = get().teachers;
+    const { recovered, totalAdded } = storageService.recoverTeachersFromAuditLogs(currentTeachers, get().subjects);
+    if (totalAdded > 0) {
+      const merged = [...currentTeachers, ...recovered];
+      storageService.saveTeachers(merged);
+      const validation = validateSchoolData(merged, get().classes, get().subjects, get().rooms, get().settings);
+      set({ teachers: merged, validation });
+    }
+    return totalAdded;
+  },
 }));
+
+// Helper: Merge teachers while strictly preserving all local teachers
+const mergeTeachersPreservingLocal = (local: Teacher[], incoming?: Teacher[]): Teacher[] => {
+  if (!incoming || !Array.isArray(incoming) || incoming.length === 0) return local;
+  const map = new Map<string, Teacher>();
+  local.forEach((t) => map.set(t.fullName.toLowerCase().trim(), t));
+  incoming.forEach((t) => {
+    const key = t.fullName.toLowerCase().trim();
+    if (map.has(key)) {
+      map.set(key, { ...map.get(key)!, ...t });
+    } else {
+      map.set(key, t);
+    }
+  });
+  return Array.from(map.values());
+};
 
 // Remote school data sync handler
 realtimeSyncService.onRemoteSchoolData((data) => {
   if (!data) return;
   const current = useSchoolStore.getState();
-  const nextTeachers = data.teachers || current.teachers;
+
+  // 1. Auto-snapshot local state before any remote change
+  storageService.saveAutoSnapshot('Автобэкап перед синхронизацией', {
+    teachers: current.teachers,
+    classes: current.classes,
+    subjects: current.subjects,
+    rooms: current.rooms,
+    settings: current.settings,
+  });
+
+  // 2. Non-destructive merge: Never delete local teachers
+  const nextTeachers = mergeTeachersPreservingLocal(current.teachers, data.teachers);
   const nextClasses = data.classes || current.classes;
   const nextSubjects = data.subjects || current.subjects;
   const nextRooms = data.rooms || current.rooms;
   const nextSettings = data.settings || current.settings;
 
-  if (data.teachers) storageService.saveTeachers(data.teachers);
-  if (data.classes) storageService.saveClasses(data.classes);
+  storageService.saveTeachers(nextTeachers);
+  if (data.classes) storageService.saveClasses(nextClasses);
   if (data.subjects) storageService.saveSubjects(data.subjects);
   if (data.rooms) storageService.saveRooms(data.rooms);
   if (data.settings) storageService.saveSettings(data.settings);
@@ -623,14 +663,23 @@ realtimeSyncService.onRemoteSyncResponse((state) => {
   if (state.schoolData) {
     const data = state.schoolData;
     const current = useSchoolStore.getState();
-    const nextTeachers = data.teachers || current.teachers;
+
+    storageService.saveAutoSnapshot('Автобэкап перед полным обновлением', {
+      teachers: current.teachers,
+      classes: current.classes,
+      subjects: current.subjects,
+      rooms: current.rooms,
+      settings: current.settings,
+    });
+
+    const nextTeachers = mergeTeachersPreservingLocal(current.teachers, data.teachers);
     const nextClasses = data.classes || current.classes;
     const nextSubjects = data.subjects || current.subjects;
     const nextRooms = data.rooms || current.rooms;
     const nextSettings = data.settings || current.settings;
 
-    if (data.teachers) storageService.saveTeachers(data.teachers);
-    if (data.classes) storageService.saveClasses(data.classes);
+    storageService.saveTeachers(nextTeachers);
+    if (data.classes) storageService.saveClasses(nextClasses);
     if (data.subjects) storageService.saveSubjects(data.subjects);
     if (data.rooms) storageService.saveRooms(data.rooms);
     if (data.settings) storageService.saveSettings(data.settings);

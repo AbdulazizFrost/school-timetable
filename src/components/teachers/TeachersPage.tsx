@@ -10,6 +10,8 @@ import {
   Upload,
   UserCheck,
   Users,
+  History,
+  Check,
 } from 'lucide-react';
 import { Teacher } from '../../types';
 import { useSchoolStore } from '../../store/useSchoolStore';
@@ -22,7 +24,10 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { Badge } from '../common/Badge';
 
 export const TeachersPage: React.FC = () => {
-  const { teachers, classes, subjects, settings, deleteTeacher, language, t } = useSchoolStore();
+  const { teachers, classes, subjects, settings, deleteTeacher, language, t, recoverTeachersFromAudit } =
+    useSchoolStore();
+
+  const [restoreMsg, setRestoreMsg] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
@@ -63,6 +68,24 @@ export const TeachersPage: React.FC = () => {
     }
   };
 
+  const handleRecover = () => {
+    const count = recoverTeachersFromAudit();
+    if (count > 0) {
+      setRestoreMsg(
+        language === 'uz'
+          ? `✓ Audit jurnalidan ${count} nafar o'qituvchi muvaffaqiyatli tiklandi!`
+          : `✓ Успешно восстановлено ${count} учителей из журнала действий!`
+      );
+    } else {
+      setRestoreMsg(
+        language === 'uz'
+          ? "Audit jurnalida yangi qo'shilgan o'qituvchilar topilmadi."
+          : 'Все добавленные ранее учителя уже присутствуют в списке.'
+      );
+    }
+    setTimeout(() => setRestoreMsg(''), 7000);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
@@ -78,7 +101,18 @@ export const TeachersPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRecover}
+            title={language === 'uz' ? "Audit jurnalidan o'qituvchilarni tiklash" : "Восстановить ранее добавленных учителей из журнала аудита"}
+            className="text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100 font-bold"
+          >
+            <History className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400" />
+            <span>{language === 'uz' ? "O'qituvchilarni tiklash" : "Восстановить учителей"}</span>
+          </Button>
+
           <Button variant="outline" size="sm" onClick={() => setIsBatchOpen(true)}>
             <Upload className="w-4 h-4 mr-1.5" />
             {t('import_teachers')}
@@ -89,6 +123,13 @@ export const TeachersPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {restoreMsg && (
+        <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in">
+          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{restoreMsg}</span>
+        </div>
+      )}
 
       {/* Filters bar */}
       <Card>

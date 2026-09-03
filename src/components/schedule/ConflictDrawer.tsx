@@ -6,7 +6,7 @@ import { Button } from '../common/Button';
 import { DAY_NAMES } from '../../types';
 
 export const ConflictDrawer: React.FC = () => {
-  const { schedule, conflictDrawerOpen, setConflictDrawerOpen, optimizeCurrentSchedule, isOptimizing } =
+  const { schedule, conflictDrawerOpen, setConflictDrawerOpen, optimizeCurrentSchedule, isOptimizing, pushHistory } =
     useScheduleStore();
   const { classes, teachers, rooms, subjects } = useSchoolStore();
 
@@ -15,6 +15,66 @@ export const ConflictDrawer: React.FC = () => {
   const conflicts = schedule?.conflicts || [];
   const teacherMap = new Map(teachers.map((t) => [t.id, t]));
   const classMap = new Map(classes.map((c) => [c.id, c]));
+
+  const handleFixKelajak = (classId?: string) => {
+    if (!schedule) return;
+    const targetClassId =
+      classId || conflicts.find((c) => c.affectedEntityIds?.classIds?.[0])?.affectedEntityIds?.classIds?.[0];
+    if (!targetClassId) return;
+
+    const cls = classes.find((c) => c.id === targetClassId);
+    if (!cls) return;
+
+    const req = cls.curriculum.find(
+      (r) => r.subjectId === 'kelajak-darsi' || r.subjectId.toLowerCase().includes('kelajak')
+    );
+    if (!req) return;
+
+    const entries = [...schedule.entries];
+    const existingIndex = entries.findIndex(
+      (e) =>
+        e.classId === targetClassId &&
+        (e.subjectId === 'kelajak-darsi' || e.subjectId.toLowerCase().includes('kelajak'))
+    );
+
+    let kelajakEntry: any;
+    if (existingIndex !== -1) {
+      kelajakEntry = { ...entries[existingIndex], day: 1, period: 1, isLocked: true };
+      entries.splice(existingIndex, 1);
+    } else {
+      kelajakEntry = {
+        id: `entry_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        classId: targetClassId,
+        subjectId: req.subjectId,
+        teacherId: req.teacherId || teachers[0]?.id,
+        classroomId: cls.homeRoomId || '',
+        day: 1,
+        period: 1,
+        isLocked: true,
+      };
+    }
+
+    const conflictEntryIndex = entries.findIndex(
+      (e) => e.classId === targetClassId && e.day === 1 && e.period === 1
+    );
+    if (conflictEntryIndex !== -1) {
+      const displaced = entries[conflictEntryIndex];
+      let placed = false;
+      for (const d of [1, 2, 3, 4, 5, 6]) {
+        for (let p = 2; p <= 7; p++) {
+          if (!entries.some((e) => e.classId === targetClassId && e.day === d && e.period === p)) {
+            entries[conflictEntryIndex] = { ...displaced, day: d, period: p };
+            placed = true;
+            break;
+          }
+        }
+        if (placed) break;
+      }
+    }
+
+    entries.push(kelajakEntry);
+    pushHistory(entries);
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex items-end sm:items-stretch sm:justify-end">
