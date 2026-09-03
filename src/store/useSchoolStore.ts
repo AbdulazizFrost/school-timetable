@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Classroom, CurriculumRequirement, ScheduleSettings, SchoolClass, Subject, Teacher } from '../types';
+import { Classroom, CurriculumRequirement, ScheduleSettings, SchoolClass, Subject, Teacher, TeacherClassAllocation } from '../types';
 import { ValidationResult } from '../types/constraints';
 import {
   INITIAL_CLASSES,
@@ -85,7 +85,6 @@ const initialValidation = validateSchoolData(
   loadedRooms,
   loadedSettings
 );
-import { TeacherClassAllocation } from '../types';
 
 const syncClassesWithTeacherAllocations = (
   classes: SchoolClass[],
