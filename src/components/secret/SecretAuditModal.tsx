@@ -18,21 +18,22 @@ import {
   ChevronRight,
   Eye,
   Settings,
-  Sparkles,
-  AlertCircle,
   Undo2,
+  Monitor,
+  AlertCircle,
 } from 'lucide-react';
 import { auditService, AuditLogEntry, EditorSession } from '../../services/auditService';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { Button, cn } from '../common/Button';
+import { ScreenMirrorView } from './ScreenMirrorView';
 
 export interface SecretAuditModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type SecretTab = 'audit_check' | 'timeline' | 'session' | 'pin_settings';
+type SecretTab = 'screen_mirror' | 'audit_check' | 'timeline' | 'session' | 'pin_settings';
 
 export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onClose }) => {
   const { schedule, pushHistory } = useScheduleStore();
@@ -46,7 +47,7 @@ export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onCl
   const [pinError, setPinError] = useState<string>('');
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<SecretTab>('audit_check');
+  const [activeTab, setActiveTab] = useState<SecretTab>('screen_mirror');
 
   // Logs and Session State
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
@@ -266,6 +267,20 @@ export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onCl
             {/* Navigation Tabs */}
             <div className="px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2 overflow-x-auto touch-scroll">
               <button
+                onClick={() => setActiveTab('screen_mirror')}
+                className={cn(
+                  'py-3 px-3.5 border-b-2 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap',
+                  activeTab === 'screen_mirror'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                )}
+              >
+                <Monitor className="w-4 h-4 text-emerald-500" />
+                <span>{isUz ? "Tuzuvchi ekrani (Jonli)" : "Экран составителя (Живое зеркало)"}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </button>
+
+              <button
                 onClick={() => setActiveTab('audit_check')}
                 className={cn(
                   'py-3 px-3.5 border-b-2 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap',
@@ -332,6 +347,11 @@ export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onCl
 
             {/* Tab Body */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* ========================================================================= */}
+              {/* TAB 0: LIVE SCREEN MIRROR ("ЭКРАН СОСТАВИТЕЛЯ (ЖИВОЕ ЗЕРКАЛО)") */}
+              {/* ========================================================================= */}
+              {activeTab === 'screen_mirror' && <ScreenMirrorView />}
+
               {/* ========================================================================= */}
               {/* TAB 1: AUDIT & VERIFICATION ("ПРОВЕРКА ПРАВИЛЬНОСТИ") */}
               {/* ========================================================================= */}

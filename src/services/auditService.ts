@@ -1,4 +1,4 @@
-﻿import { ScheduleConflict } from '../types/constraints';
+import { ScheduleConflict } from '../types/constraints';
 import { ScheduleEntry } from '../types/schedule';
 
 export type AuditActionType =
@@ -212,5 +212,48 @@ export const auditService = {
     try {
       localStorage.removeItem(STORAGE_KEY_AUDIT);
     } catch {}
+  },
+
+  /**
+   * Get the initial schedule snapshot before modifications
+   */
+  getInitialSnapshot: (): ScheduleEntry[] | null => {
+    const logs = auditService.getLogs();
+    // Look for the earliest snapshot in the logs
+    for (let i = logs.length - 1; i >= 0; i--) {
+      if (logs[i].snapshot && logs[i].snapshot!.length > 0) {
+        return logs[i].snapshot!;
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Compare initial entries vs current entries to identify modified cells
+   */
+  getModifiedEntryIds: (currentEntries: ScheduleEntry[]): Set<string> => {
+    const initial = auditService.getInitialSnapshot();
+    const modifiedIds = new Set<string>();
+    if (!initial || initial.length === 0) return modifiedIds;
+
+    const initialMap = new Map(initial.map((e) => [e.id, e]));
+
+    currentEntries.forEach((cur) => {
+      const init = initialMap.get(cur.id);
+      if (!init) {
+        // Newly added
+        modifiedIds.add(cur.id);
+      } else if (
+        init.day !== cur.day ||
+        init.period !== cur.period ||
+        init.teacherId !== cur.teacherId ||
+        init.classroomId !== cur.classroomId
+      ) {
+        // Moved or reassigned
+        modifiedIds.add(cur.id);
+      }
+    });
+
+    return modifiedIds;
   },
 };
