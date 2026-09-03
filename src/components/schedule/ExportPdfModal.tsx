@@ -113,9 +113,9 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
         </div>
       }
     >
-      <div className="p-6 space-y-6">
+      <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
         {/* TOP CONTROLS: Mode, Target & Language */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 bg-slate-50 dark:bg-slate-800/60 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/60">
           {/* 1. Scope Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
@@ -126,7 +126,7 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
               <button
                 type="button"
                 onClick={() => setScope('classes')}
-                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 min-h-[40px] rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
                   scope === 'classes'
                     ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -138,19 +138,19 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
               <button
                 type="button"
                 onClick={() => setScope('teachers')}
-                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 min-h-[40px] rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
                   scope === 'teachers'
                     ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                {isUz ? "O'qituvchilar" : 'Учителя'}
+                {isUz ? "O'qituvchi" : 'Учителя'}
               </button>
               <button
                 type="button"
                 onClick={() => setScope('master_grid')}
-                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 min-h-[40px] rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
                   scope === 'master_grid'
                     ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -171,12 +171,12 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
             </label>
             {scope === 'classes' && (
               <select
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
+                className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
                 value={targetClassId}
                 onChange={(e) => setTargetClassId(e.target.value)}
               >
                 <option value="all">
-                  ✨ {isUz ? `Barcha ${classes.length} ta sinf (alohida A4 varaqda)` : `Все ${classes.length} классов (по 1 стр. на класс)`}
+                  ✨ {isUz ? `Barcha ${classes.length} ta sinf (alohida varaqda)` : `Все ${classes.length} классов (по 1 стр. на класс)`}
                 </option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -358,17 +358,18 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* BOTTOM ACTION BUTTONS */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               type="button"
               variant="outline"
               size="md"
               onClick={handleExportExcel}
               disabled={isExporting}
+              className="flex-1 sm:flex-none"
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-              {isUz ? 'Excel (.xlsx)' : 'Скачать Excel'}
+              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-600" />
+              Excel
             </Button>
             <Button
               type="button"
@@ -376,19 +377,21 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
               size="md"
               onClick={handlePrint}
               disabled={isExporting}
+              className="flex-1 sm:flex-none"
             >
-              <Printer className="w-4 h-4 mr-2 text-slate-600 dark:text-slate-300" />
+              <Printer className="w-4 h-4 mr-1.5 text-slate-600 dark:text-slate-300" />
               {isUz ? 'Chop etish' : 'Печать'}
             </Button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <Button
               type="button"
               variant="ghost"
               size="md"
               onClick={onClose}
               disabled={isExporting}
+              className="hidden sm:inline-flex"
             >
               {isUz ? 'Yopish' : 'Закрыть'}
             </Button>
@@ -400,7 +403,7 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
               onClick={handleExportPDF}
               isLoading={isExporting}
               disabled={isExporting}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-lg shadow-rose-600/20 px-6 cursor-pointer"
+              className="flex-1 sm:flex-none bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-lg shadow-rose-600/20 px-6 cursor-pointer"
             >
               {isExporting ? (
                 <>
@@ -410,7 +413,7 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({ isOpen, onClose 
               ) : (
                 <>
                   <FileText className="w-4 h-4 mr-2" />
-                  {isUz ? '📄 Dars jadvalini PDF yuklab olish' : '📄 Скачать расписание PDF'}
+                  {isUz ? 'PDF yuklab olish' : 'Скачать PDF'}
                 </>
               )}
             </Button>

@@ -39,15 +39,17 @@ export const MobileNav: React.FC<MobileNavProps> = ({ currentSection, onNavigate
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 z-40 flex items-center justify-around px-1 no-print shadow-xl">
+    <nav aria-label="Мобильная навигация" className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 z-40 flex items-center justify-around px-1 no-print shadow-xl">
       {items.map((item) => {
         const isActive = currentSection === item.id;
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => onNavigate(item.id)}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'flex-1 flex flex-col items-center justify-center h-14 rounded-xl transition-all cursor-pointer relative select-none py-1',
+              'flex-1 flex flex-col items-center justify-center h-14 min-h-[48px] min-w-[48px] rounded-xl transition-all cursor-pointer relative select-none py-1',
               isActive
                 ? 'text-blue-600 dark:text-blue-400 font-bold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 active:scale-95'
@@ -59,12 +61,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({ currentSection, onNavigate
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
               )}
             </div>
-            <span className="text-[9.5px] mt-0.5 whitespace-nowrap tracking-tight">
+            <span className="text-[9.5px] mt-0.5 whitespace-nowrap tracking-tight font-medium">
               {item.label}
             </span>
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 };

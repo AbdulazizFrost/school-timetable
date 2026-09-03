@@ -54,11 +54,48 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8fafc;
   color: #0f172a;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dark body {
   background-color: #090d16;
   color: #f8fafc;
+}
+
+/* Touch action optimization for mobile responsiveness */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"],
+[tabindex] {
+  touch-action: manipulation;
+}
+
+/* iOS Safari auto-zoom prevention: inputs must be >= 16px on mobile */
+@media screen and (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Hide scrollbar utility while maintaining touch/mouse scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth momentum scrolling for iOS */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom sleek scrollbar */
@@ -86,6 +123,18 @@ body {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.8);
+}
+
+/* Respect user motion preferences for accessibility & battery saving */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Print Styles */

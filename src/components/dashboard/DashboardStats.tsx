@@ -32,23 +32,23 @@ export const DashboardStats: React.FC = () => {
   const scoreMeta = score !== undefined ? getScoreRatingText(score) : null;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
       {/* 1. Classes */}
       <Card hoverEffect className="relative overflow-hidden">
-        <CardContent className="p-4">
+        <CardContent className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {language === 'uz' ? 'Sinflar' : 'Классы'}
             </span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <GraduationCap className="w-4 h-4" />
+            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+              <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+          <div className="mt-1.5 sm:mt-2">
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
               {classes.length}
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-[10.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               {language === 'uz' ? `${classes.length} ta sinf` : pluralizeRu(classes.length, 'класс', 'класса', 'классов')}
             </p>
           </div>

@@ -78,27 +78,28 @@ export const BatchTeacherModal: React.FC<BatchTeacherModalProps> = ({ isOpen, on
           </label>
           <textarea
             rows={8}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-base sm:text-xs font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder={sampleTemplate}
             value={textData}
             onChange={(e) => setTextData(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={() => setTextData(sampleTemplate)}
-            className="text-xs"
+            className="text-xs self-start"
           >
             Вставить пример
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2">
+            <Button type="button" variant="outline" size="md" onClick={onClose}>
               Отмена
             </Button>
-            <Button variant="primary" size="sm" onClick={handleImport}>
+            <Button type="button" variant="primary" size="md" onClick={handleImport} className="font-bold">
               Добавить преподавателей
             </Button>
           </div>

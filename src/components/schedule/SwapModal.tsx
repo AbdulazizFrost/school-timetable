@@ -79,11 +79,11 @@ export const SwapModal: React.FC = () => {
           При обмене система проверит доступность обоих преподавателей в новых временных слотах.
         </p>
 
-        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" size="sm" onClick={() => setSwapModalOpen(false)}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" size="md" onClick={() => setSwapModalOpen(false)}>
             Отмена
           </Button>
-          <Button variant="primary" size="sm" onClick={handleConfirmSwap}>
+          <Button variant="primary" size="md" onClick={handleConfirmSwap} className="font-bold">
             Обменять местами
           </Button>
         </div>

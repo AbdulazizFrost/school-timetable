@@ -66,14 +66,15 @@ export const ScheduleToolbar: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 space-y-4 shadow-xs">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3 sm:space-y-4 shadow-xs">
       {/* Top row: View Switcher, Entity Dropdown, History Undo/Redo */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Left: View Mode Tabs */}
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        {/* View Mode Tabs */}
+        <div className="w-full sm:w-auto">
           <Tabs
             tabs={viewTabs}
             activeTab={viewMode}
+            className="w-full sm:w-auto"
             onChange={(id) => {
               setViewMode(id as ScheduleViewMode);
               if (id === 'classes' && classes.length > 0) setSelectedEntityId(classes[0].id);
@@ -81,79 +82,10 @@ export const ScheduleToolbar: React.FC = () => {
               if (id === 'classrooms' && rooms.length > 0) setSelectedEntityId(rooms[0].id);
             }}
           />
-
-          {/* Specific Entity Selector */}
-          <div className="min-w-[180px]">
-            {viewMode === 'classes' && (
-              <select
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100"
-                value={showAllInGrid ? 'all' : selectedEntityId || (classes[0]?.id ?? '')}
-                onChange={(e) => {
-                  if (e.target.value === 'all') {
-                    setShowAllInGrid(true);
-                  } else {
-                    setShowAllInGrid(false);
-                    setSelectedEntityId(e.target.value);
-                  }
-                }}
-              >
-                <option value="all">📊 {t('summary_grid')}</option>
-                {classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name} ({cls.studentCount} {t('class_students').toLowerCase()})
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {viewMode === 'teachers' && (
-              <select
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100"
-                value={showAllInGrid ? 'all' : selectedEntityId || (teachers[0]?.id ?? '')}
-                onChange={(e) => {
-                  if (e.target.value === 'all') {
-                    setShowAllInGrid(true);
-                  } else {
-                    setShowAllInGrid(false);
-                    setSelectedEntityId(e.target.value);
-                  }
-                }}
-              >
-                <option value="all">📊 {t('summary_grid')}</option>
-                {teachers.map((tch) => (
-                  <option key={tch.id} value={tch.id}>
-                    {tch.fullName} ({tch.weeklyLoad} {t('hours')})
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {viewMode === 'classrooms' && (
-              <select
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100"
-                value={showAllInGrid ? 'all' : selectedEntityId || (rooms[0]?.id ?? '')}
-                onChange={(e) => {
-                  if (e.target.value === 'all') {
-                    setShowAllInGrid(true);
-                  } else {
-                    setShowAllInGrid(false);
-                    setSelectedEntityId(e.target.value);
-                  }
-                }}
-              >
-                <option value="all">📊 {t('summary_grid')}</option>
-                {rooms.map((rm) => (
-                  <option key={rm.id} value={rm.id}>
-                    {rm.name} ({rm.roomNumber})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
         </div>
 
-        {/* Right: History Undo / Redo & Conflicts button */}
-        <div className="flex items-center gap-2">
+        {/* Undo/Redo & Conflict Status */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
           {conflictsCount > 0 ? (
             <Button
               variant="danger"
@@ -165,25 +97,27 @@ export const ScheduleToolbar: React.FC = () => {
               {conflictsCount} {t('conflicts')}
             </Button>
           ) : schedule ? (
-            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg border border-emerald-200 dark:border-emerald-800">
               <CheckCircle2 className="w-3.5 h-3.5" /> {t('zero_conflicts')}
             </span>
-          ) : null}
+          ) : <div />}
 
           {/* Undo / Redo buttons */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
             <button
+              type="button"
               onClick={undo}
               disabled={!canUndo()}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
               title={t('undo')}
             >
               <Undo2 className="w-4 h-4" />
             </button>
             <button
+              type="button"
               onClick={redo}
               disabled={!canRedo()}
-              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+              className="p-2 min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
               title={t('redo')}
             >
               <Redo2 className="w-4 h-4" />
@@ -192,37 +126,107 @@ export const ScheduleToolbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom row: Day filters & Action Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-        {/* Day Filter Pills */}
-        <div className="flex items-center gap-1">
+      {/* Row 2: Entity Selector Dropdown (Full width on mobile) */}
+      <div className="w-full">
+        {viewMode === 'classes' && (
+          <select
+            className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 cursor-pointer"
+            value={showAllInGrid ? 'all' : selectedEntityId || (classes[0]?.id ?? '')}
+            onChange={(e) => {
+              if (e.target.value === 'all') {
+                setShowAllInGrid(true);
+              } else {
+                setShowAllInGrid(false);
+                setSelectedEntityId(e.target.value);
+              }
+            }}
+          >
+            <option value="all">📊 {t('summary_grid')}</option>
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name} ({cls.studentCount} {t('class_students').toLowerCase()})
+              </option>
+            ))}
+          </select>
+        )}
+
+        {viewMode === 'teachers' && (
+          <select
+            className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 cursor-pointer"
+            value={showAllInGrid ? 'all' : selectedEntityId || (teachers[0]?.id ?? '')}
+            onChange={(e) => {
+              if (e.target.value === 'all') {
+                setShowAllInGrid(true);
+              } else {
+                setShowAllInGrid(false);
+                setSelectedEntityId(e.target.value);
+              }
+            }}
+          >
+            <option value="all">📊 {t('summary_grid')}</option>
+            {teachers.map((tch) => (
+              <option key={tch.id} value={tch.id}>
+                {tch.fullName} ({tch.weeklyLoad} {t('hours')})
+              </option>
+            ))}
+          </select>
+        )}
+
+        {viewMode === 'classrooms' && (
+          <select
+            className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 cursor-pointer"
+            value={showAllInGrid ? 'all' : selectedEntityId || (rooms[0]?.id ?? '')}
+            onChange={(e) => {
+              if (e.target.value === 'all') {
+                setShowAllInGrid(true);
+              } else {
+                setShowAllInGrid(false);
+                setSelectedEntityId(e.target.value);
+              }
+            }}
+          >
+            <option value="all">📊 {t('summary_grid')}</option>
+            {rooms.map((rm) => (
+              <option key={rm.id} value={rm.id}>
+                {rm.name} ({rm.roomNumber})
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* Row 3: Swipeable Day Filters row */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-1 px-1 touch-scroll">
+        <button
+          type="button"
+          onClick={() => setFilterDay(undefined)}
+          className={`shrink-0 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+            filterDay === undefined
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          {t('all_week')}
+        </button>
+        {settings.workingDays.map((day) => (
           <button
-            onClick={() => setFilterDay(undefined)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              filterDay === undefined
+            type="button"
+            key={day}
+            onClick={() => setFilterDay(day)}
+            className={`shrink-0 px-3.5 py-2 min-h-[38px] rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+              filterDay === day
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
             }`}
           >
-            {t('all_week')}
+            {getDayShortName(day, language)}
           </button>
-          {settings.workingDays.map((day) => (
-            <button
-              key={day}
-              onClick={() => setFilterDay(day)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                filterDay === day
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              {getDayShortName(day, language)}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
+      {/* Row 4: Action Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-2">
           {schedule && (
             <>
               <Button
@@ -231,19 +235,11 @@ export const ScheduleToolbar: React.FC = () => {
                 onClick={() => optimizeCurrentSchedule()}
                 isLoading={isOptimizing}
                 title={t('optimize')}
+                className="px-3"
               >
                 <Sparkles className="w-3.5 h-3.5 mr-1 text-indigo-500" />
-                {t('optimize')}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={cloneSchedule}
-                title={t('clone')}
-              >
-                <Copy className="w-3.5 h-3.5 mr-1" />
-                {t('clone')}
+                <span className="hidden sm:inline">{t('optimize')}</span>
+                <span className="sm:hidden">{language === 'uz' ? 'Oraliq' : 'Окна'}</span>
               </Button>
 
               <Button
@@ -251,6 +247,7 @@ export const ScheduleToolbar: React.FC = () => {
                 size="sm"
                 onClick={handleExportExcel}
                 title="Excel (.xlsx)"
+                className="px-3"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                 Excel
@@ -261,10 +258,10 @@ export const ScheduleToolbar: React.FC = () => {
                 size="sm"
                 onClick={() => setIsExportModalOpen(true)}
                 title="PDF"
-                className="border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold"
+                className="border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold px-3"
               >
                 <FileText className="w-3.5 h-3.5 mr-1.5 text-rose-600" />
-                {language === 'uz' ? 'PDF yuklab olish' : 'Скачать PDF'}
+                PDF
               </Button>
 
               <Button
@@ -272,24 +269,25 @@ export const ScheduleToolbar: React.FC = () => {
                 size="sm"
                 onClick={clearSchedule}
                 title={t('clear')}
-                className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </>
           )}
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => generateSchedule()}
-            isLoading={isGenerating}
-            disabled={isGenerating}
-          >
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            {schedule ? t('regenerate_schedule') : t('generate_schedule')}
-          </Button>
         </div>
+
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => generateSchedule()}
+          isLoading={isGenerating}
+          disabled={isGenerating}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4"
+        >
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+          {schedule ? t('regenerate_schedule') : t('generate_schedule')}
+        </Button>
       </div>
 
       {/* Modern PDF Export & Print Modal */}

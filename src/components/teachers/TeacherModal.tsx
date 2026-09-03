@@ -459,11 +459,11 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" size="sm" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" size="md" onClick={onClose}>
             {t('cancel')}
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
+          <Button variant="primary" size="md" onClick={handleSave} className="font-bold">
             {teacherToEdit ? t('save') : t('add_teacher')}
           </Button>
         </div>

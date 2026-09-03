@@ -108,7 +108,7 @@ export const ManualEditModal: React.FC = () => {
               День недели
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
+              className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-medium"
               value={day}
               onChange={(e) => setDay(Number(e.target.value))}
             >
@@ -125,7 +125,7 @@ export const ManualEditModal: React.FC = () => {
               Номер урока
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium"
+              className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-medium"
               value={period}
               onChange={(e) => setPeriod(Number(e.target.value))}
             >
@@ -144,7 +144,7 @@ export const ManualEditModal: React.FC = () => {
             Класс
           </label>
           <select
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+            className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold"
             value={classId}
             onChange={(e) => setClassId(e.target.value)}
           >
@@ -162,7 +162,7 @@ export const ManualEditModal: React.FC = () => {
             Предмет
           </label>
           <select
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+            className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold"
             value={subjectId}
             onChange={(e) => handleSubjectChange(e.target.value)}
           >
@@ -180,7 +180,7 @@ export const ManualEditModal: React.FC = () => {
             Преподаватель
           </label>
           <select
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+            className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold"
             value={teacherId}
             onChange={(e) => setTeacherId(e.target.value)}
           >
@@ -206,7 +206,7 @@ export const ManualEditModal: React.FC = () => {
             Кабинет
           </label>
           <select
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-semibold"
+            className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold"
             value={classroomId}
             onChange={(e) => setClassroomId(e.target.value)}
           >
@@ -240,11 +240,11 @@ export const ManualEditModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" size="sm" onClick={() => setEditModalOpen(false)}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" size="md" onClick={() => setEditModalOpen(false)}>
             Отмена
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
+          <Button variant="primary" size="md" onClick={handleSave} className="font-bold">
             {editingEntry ? 'Сохранить изменения' : 'Добавить в расписание'}
           </Button>
         </div>

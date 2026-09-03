@@ -266,11 +266,11 @@ export const SubjectModal: React.FC<SubjectModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" size="sm" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" size="md" onClick={onClose}>
             {t('cancel')}
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
+          <Button variant="primary" size="md" onClick={handleSave} className="font-bold">
             {subjectToEdit ? t('save') : t('add_subject')}
           </Button>
         </div>

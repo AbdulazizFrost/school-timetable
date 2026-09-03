@@ -48,21 +48,21 @@ export const Layout: React.FC<LayoutProps> = ({ currentSection, onNavigate, chil
   }, [undo, redo, canUndo, canRedo]);
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased">
+    <div className="flex h-screen h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans antialiased pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <Sidebar currentSection={currentSection} onNavigate={onNavigate} />
       </div>
 
       {/* Main Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         <Header
           onOpenBackup={() => setBackupModalOpen(true)}
           onOpenSettings={() => onNavigate('settings')}
         />
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-6">
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8 touch-scroll">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
 

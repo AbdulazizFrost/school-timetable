@@ -99,8 +99,9 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`min-h-[76px] h-full p-2.5 rounded-xl transition-all relative flex flex-col justify-between select-none group shadow-xs ${
-        isKelajak ? 'cursor-default ring-1 ring-white/20' : 'cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-[1.01]'
+      onClick={() => onEdit && onEdit(entry)}
+      className={`min-h-[72px] sm:min-h-[76px] h-full p-2 sm:p-2.5 rounded-xl transition-all relative flex flex-col justify-between select-none group shadow-xs ${
+        isKelajak ? 'cursor-default ring-1 ring-white/20' : 'cursor-pointer sm:cursor-grab sm:active:cursor-grabbing hover:shadow-md hover:scale-[1.01]'
       } ${
         isDragging ? 'opacity-40 scale-95' : ''
       } ${

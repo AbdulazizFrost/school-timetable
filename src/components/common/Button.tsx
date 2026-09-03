@@ -40,10 +40,10 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    sm: 'text-xs px-2.5 py-1.5 gap-1.5',
-    md: 'text-sm px-3.5 py-2 gap-2',
-    lg: 'text-base px-5 py-2.5 gap-2.5 font-semibold',
-    icon: 'p-2 w-9 h-9',
+    sm: 'text-xs px-3 py-2 sm:py-1.5 min-h-[38px] sm:min-h-[32px] gap-1.5',
+    md: 'text-sm px-4 py-2.5 sm:py-2 min-h-[44px] sm:min-h-[38px] gap-2',
+    lg: 'text-base px-5 py-3 sm:py-2.5 min-h-[48px] sm:min-h-[44px] gap-2.5 font-semibold',
+    icon: 'p-2.5 sm:p-2 min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center',
   };
 
   return (

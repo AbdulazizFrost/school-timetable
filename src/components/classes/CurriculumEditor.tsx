@@ -89,87 +89,181 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         </div>
       )}
 
-      {/* Curriculum Items List */}
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-        <table className="w-full text-xs text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-              <th className="p-2.5 font-semibold">Предмет</th>
-              <th className="p-2.5 font-semibold">Преподаватель</th>
-              <th className="p-2.5 font-semibold text-center w-24">Уроков/нед.</th>
-              <th className="p-2.5 font-semibold text-center w-12">Удалить</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {curriculum.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-6 text-center text-slate-400">
-                  Учебный план пуст. Нажмите «+ Добавить предмет».
-                </td>
-              </tr>
-            ) : (
-              curriculum.map((req) => {
-                const eligibleTeachers = teachers.filter((t) => t.subjectIds.includes(req.subjectId));
+      {/* Mobile-Friendly Curriculum Items View */}
+      {curriculum.length === 0 ? (
+        <div className="p-6 text-center text-slate-400 border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 text-xs">
+          Учебный план пуст. Нажмите «+ Добавить предмет».
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card List (< sm) */}
+          <div className="sm:hidden space-y-3">
+            {curriculum.map((req) => {
+              const eligibleTeachers = teachers.filter((t) => t.subjectIds.includes(req.subjectId));
+              return (
+                <div
+                  key={req.id}
+                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2.5 shadow-xs"
+                >
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Предмет
+                    </label>
+                    <select
+                      className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+                      value={req.subjectId}
+                      onChange={(e) => handleUpdateRow(req.id, { subjectId: e.target.value })}
+                    >
+                      {subjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                return (
-                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                    <td className="p-2">
-                      <select
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-                        value={req.subjectId}
-                        onChange={(e) => handleUpdateRow(req.id, { subjectId: e.target.value })}
-                      >
-                        {subjects.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Преподаватель
+                    </label>
+                    <select
+                      className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100"
+                      value={req.teacherId || ''}
+                      onChange={(e) => handleUpdateRow(req.id, { teacherId: e.target.value || undefined })}
+                    >
+                      <option value="">(Авто-выбор преподавателя)</option>
+                      {eligibleTeachers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.fullName} ({t.weeklyLoad}ч)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                    <td className="p-2">
-                      <select
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
-                        value={req.teacherId || ''}
-                        onChange={(e) => handleUpdateRow(req.id, { teacherId: e.target.value || undefined })}
-                      >
-                        <option value="">(Авто-выбор преподавателя)</option>
-                        {eligibleTeachers.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.fullName} ({t.weeklyLoad}ч)
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Часов в неделю:</span>
+                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRow(req.id, { lessonsPerWeek: Math.max(1, req.lessonsPerWeek - 1) })}
+                          className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 shadow-xs flex items-center justify-center font-bold text-base cursor-pointer select-none"
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-black font-mono text-sm text-slate-900 dark:text-white">
+                          {req.lessonsPerWeek}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRow(req.id, { lessonsPerWeek: Math.min(15, req.lessonsPerWeek + 1) })}
+                          className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 shadow-xs flex items-center justify-center font-bold text-base cursor-pointer select-none"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
 
-                    <td className="p-2 text-center">
-                      <input
-                        type="number"
-                        min={1}
-                        max={15}
-                        className="w-16 mx-auto bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center font-bold font-mono text-slate-900 dark:text-slate-100"
-                        value={req.lessonsPerWeek}
-                        onChange={(e) => handleUpdateRow(req.id, { lessonsPerWeek: Math.max(1, Number(e.target.value)) })}
-                      />
-                    </td>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRow(req.id)}
+                      className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-rose-600 rounded-xl transition-colors cursor-pointer"
+                      title="Удалить предмет"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-                    <td className="p-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(req.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                        title="Удалить предмет"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+          {/* Desktop Table View (>= sm) */}
+          <div className="hidden sm:block border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                  <th className="p-2.5 font-semibold">Предмет</th>
+                  <th className="p-2.5 font-semibold">Преподаватель</th>
+                  <th className="p-2.5 font-semibold text-center w-36">Уроков/нед.</th>
+                  <th className="p-2.5 font-semibold text-center w-12">Удалить</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {curriculum.map((req) => {
+                  const eligibleTeachers = teachers.filter((t) => t.subjectIds.includes(req.subjectId));
+
+                  return (
+                    <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                      <td className="p-2">
+                        <select
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+                          value={req.subjectId}
+                          onChange={(e) => handleUpdateRow(req.id, { subjectId: e.target.value })}
+                        >
+                          {subjects.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              {sub.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+
+                      <td className="p-2">
+                        <select
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+                          value={req.teacherId || ''}
+                          onChange={(e) => handleUpdateRow(req.id, { teacherId: e.target.value || undefined })}
+                        >
+                          <option value="">(Авто-выбор преподавателя)</option>
+                          {eligibleTeachers.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.fullName} ({t.weeklyLoad}ч)
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+
+                      <td className="p-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateRow(req.id, { lessonsPerWeek: Math.max(1, req.lessonsPerWeek - 1) })}
+                            className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 font-bold flex items-center justify-center cursor-pointer select-none"
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center font-bold font-mono text-xs text-slate-900 dark:text-slate-100">
+                            {req.lessonsPerWeek}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateRow(req.id, { lessonsPerWeek: Math.min(15, req.lessonsPerWeek + 1) })}
+                            className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 font-bold flex items-center justify-center cursor-pointer select-none"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+
+                      <td className="p-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(req.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                          title="Удалить предмет"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <Button
         type="button"

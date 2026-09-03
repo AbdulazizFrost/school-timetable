@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBackup, onOpenSettings }) 
   };
 
   return (
-    <header className="h-14 sm:h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between z-20 shrink-0 no-print">
+    <header className="h-[calc(3.5rem+env(safe-area-inset-top))] sm:h-16 pt-[env(safe-area-inset-top)] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between z-20 shrink-0 no-print">
       {/* School Name & Status Indicator */}
       <div className="flex items-center gap-2 min-w-0 pr-2">
         <div className="min-w-0">

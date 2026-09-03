@@ -82,8 +82,8 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Сохраняет настройки, преподавателей, классы, учебные планы, кабинеты и текущее расписание.
           </p>
-          <Button variant="outline" size="sm" onClick={handleExportJSON} className="w-full text-xs">
-            <Download className="w-3.5 h-3.5 mr-1.5" />
+          <Button variant="outline" size="md" onClick={handleExportJSON} className="w-full text-sm font-semibold">
+            <Download className="w-4 h-4 mr-2 text-blue-600" />
             Скачать файл проекта (.json)
           </Button>
         </div>
@@ -110,11 +110,11 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
 
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full text-xs"
+            className="w-full text-sm font-semibold"
           >
-            <Upload className="w-3.5 h-3.5 mr-1.5" />
+            <Upload className="w-4 h-4 mr-2 text-emerald-600" />
             Выбрать файл для загрузки
           </Button>
         </div>
@@ -138,7 +138,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
         )}
 
         <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="primary" size="sm" onClick={onClose}>
+          <Button variant="primary" size="md" onClick={onClose} className="w-full sm:w-auto font-bold">
             Закрыть
           </Button>
         </div>

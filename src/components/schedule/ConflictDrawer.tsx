@@ -17,17 +17,20 @@ export const ConflictDrawer: React.FC = () => {
   const classMap = new Map(classes.map((c) => [c.id, c]));
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+    <div className="fixed inset-0 z-50 overflow-hidden flex items-end sm:items-stretch sm:justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity"
         onClick={() => setConflictDrawerOpen(false)}
       />
 
       {/* Drawer panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-none max-h-[92dvh] sm:max-h-full h-full shadow-2xl border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 z-10 flex flex-col animate-in slide-in-from-bottom-5 sm:slide-in-from-right duration-200">
+        {/* Mobile handle */}
+        <div className="sm:hidden w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
         {/* Header */}
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-5 h-5" />
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
@@ -35,15 +38,17 @@ export const ConflictDrawer: React.FC = () => {
             </h3>
           </div>
           <button
+            type="button"
             onClick={() => setConflictDrawerOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Закрыть"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content list */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-3">
+        <div className="p-4 sm:p-5 flex-1 overflow-y-auto touch-scroll space-y-3">
           {conflicts.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <ShieldAlert className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
@@ -86,13 +91,13 @@ export const ConflictDrawer: React.FC = () => {
 
         {/* Footer actions */}
         {conflicts.length > 0 && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2">
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             <Button
               variant="primary"
-              size="sm"
+              size="md"
               onClick={() => optimizeCurrentSchedule()}
               isLoading={isOptimizing}
-              className="w-full text-xs font-semibold"
+              className="w-full text-sm font-bold"
             >
               <Sparkles className="w-4 h-4 mr-1.5" />
               Попробовать исправить автоматически

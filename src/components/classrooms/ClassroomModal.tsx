@@ -119,7 +119,7 @@ export const ClassroomModal: React.FC<ClassroomModalProps> = ({
               Тип помещения *
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100"
+              className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100"
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
@@ -142,11 +142,11 @@ export const ClassroomModal: React.FC<ClassroomModalProps> = ({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <Button variant="outline" size="sm" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <Button variant="outline" size="md" onClick={onClose}>
             Отмена
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSave}>
+          <Button variant="primary" size="md" onClick={handleSave} className="font-bold">
             {roomToEdit ? 'Сохранить изменения' : 'Добавить кабинет'}
           </Button>
         </div>

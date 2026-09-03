@@ -45,31 +45,36 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      {/* Dialog box */}
+      {/* Dialog / Bottom Sheet box */}
       <div
         className={cn(
-          'relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 my-auto overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]',
+          'relative w-full bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 z-10 overflow-hidden animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200 flex flex-col max-h-[92dvh] sm:max-h-[90dvh]',
           maxWidthClasses[maxWidth]
         )}
       >
+        {/* Mobile Drag Indicator Handle */}
+        <div className="sm:hidden w-10 h-1.2 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
-            <div>
-              {title && <h3 className="text-lg font-semibold text-slate-900 dark:text-white leading-6">{title}</h3>}
-              {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{description}</p>}
+          <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+            <div className="min-w-0 pr-2">
+              {title && <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">{title}</div>}
+              {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{description}</p>}
             </div>
             {showCloseButton && (
               <button
+                type="button"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors -mr-1 -mt-1 cursor-pointer"
+                aria-label="Закрыть"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center -mr-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -78,7 +83,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Content body */}
-        <div className="p-6 overflow-y-auto">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto touch-scroll flex-1 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">{children}</div>
       </div>
     </div>
   );

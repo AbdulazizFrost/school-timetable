@@ -62,15 +62,16 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-xs border-collapse">
+            {/* Matrix Table */}
+            <div className="overflow-x-auto touch-scroll -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
+              <table className={`w-full text-xs border-collapse ${displayDays.length > 1 ? 'min-w-[620px] sm:min-w-[700px]' : 'w-full'}`}>
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-                    <th className="p-3 font-semibold text-left w-24">
+                    <th className="p-2.5 sm:p-3 font-semibold text-left w-20 sm:w-24 sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 border-r border-slate-200/80 dark:border-slate-800 shadow-xs">
                       {language === 'uz' ? 'Dars / Vaqt' : 'Урок / Время'}
                     </th>
                     {displayDays.map((day) => (
-                      <th key={day} className="p-3 font-semibold text-center">
+                      <th key={day} className="p-2.5 sm:p-3 font-semibold text-center">
                         <span className="font-bold text-slate-900 dark:text-white">
                           {getDayShortName(day, language)}
                         </span>
@@ -88,11 +89,11 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
 
                     return (
                       <tr key={period} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/20">
-                        <td className="p-3 text-slate-500 dark:text-slate-400 align-middle">
-                          <div className="font-bold text-xs text-slate-900 dark:text-white">
+                        <td className="p-2 sm:p-3 text-slate-500 dark:text-slate-400 align-middle sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 shadow-xs">
+                          <div className="font-bold text-xs text-slate-900 dark:text-white whitespace-nowrap">
                             {period} {t('lesson')}
                           </div>
-                          {timeStr && <div className="text-[10px] text-slate-400 font-mono">{timeStr}</div>}
+                          {timeStr && <div className="text-[10px] text-slate-400 font-mono whitespace-nowrap">{timeStr}</div>}
                         </td>
 
                         {displayDays.map((day) => {
@@ -121,7 +122,7 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
                           );
 
                           return (
-                            <td key={day} className="p-1.5 align-top min-w-[130px] max-w-[200px]">
+                            <td key={day} className={`p-1 sm:p-1.5 align-top ${displayDays.length > 1 ? 'min-w-[120px] sm:min-w-[130px] max-w-[200px]' : 'w-full'}`}>
                               <ScheduleCell
                                 entry={entry}
                                 subject={subject}

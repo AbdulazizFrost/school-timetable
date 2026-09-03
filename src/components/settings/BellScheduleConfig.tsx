@@ -41,7 +41,7 @@ export const BellScheduleConfig: React.FC = () => {
       </CardHeader>
 
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: maxPeriod }, (_, i) => i + 1).map((p) => {
             const config = periodTimes.find((pt) => pt.period === p) || {
               period: p,
@@ -52,26 +52,33 @@ export const BellScheduleConfig: React.FC = () => {
             return (
               <div
                 key={p}
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-xs space-y-2"
+                className="p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs space-y-2.5 shadow-xs"
               >
-                <div className="font-bold text-slate-900 dark:text-white">
-                  {p} урок
+                <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between">
+                  <span>{p}-урок</span>
+                  <span className="text-[11px] font-mono text-slate-400 font-medium">
+                    {config.startTime} – {config.endTime}
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-0.5">Начало</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                      Начало
+                    </label>
                     <input
                       type="time"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-slate-100 font-mono"
+                      className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-sm text-slate-900 dark:text-slate-100 font-mono font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={config.startTime}
                       onChange={(e) => handleTimeChange(p, 'startTime', e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-0.5">Конец</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                      Конец
+                    </label>
                     <input
                       type="time"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-slate-100 font-mono"
+                      className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 text-sm text-slate-900 dark:text-slate-100 font-mono font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={config.endTime}
                       onChange={(e) => handleTimeChange(p, 'endTime', e.target.value)}
                     />
