@@ -60,7 +60,28 @@ interface SchoolState {
 
 const rawLoadedTeachers = storageService.loadTeachers();
 const isOldTeachers = !rawLoadedTeachers || rawLoadedTeachers.some((t) => t.id === 'tch_1a' || t.fullName.includes('Karimova Nargiza') || t.fullName.includes('Smirnova'));
-const loadedTeachers = isOldTeachers ? INITIAL_TEACHERS : rawLoadedTeachers;
+let loadedTeachers = isOldTeachers ? INITIAL_TEACHERS : rawLoadedTeachers;
+
+// Ensure Nasiba Sabirova has max 5 lessons per day and availability 1-5
+loadedTeachers = loadedTeachers.map((t) => {
+  if (t.id === 'tch_nasiba' || t.fullName.toLowerCase().includes('nasiba')) {
+    const avail: Record<string, boolean> = { ...(t.availability || {}) };
+    [1, 2, 3, 4, 5, 6].forEach((d) => {
+      [1, 2, 3, 4, 5].forEach((p) => {
+        avail[`${d}-${p}`] = true;
+      });
+      [6, 7, 8].forEach((p) => {
+        avail[`${d}-${p}`] = false;
+      });
+    });
+    return {
+      ...t,
+      maxLessonsPerDay: 5,
+      availability: avail,
+    };
+  }
+  return t;
+});
 
 const rawLoadedSubjects = storageService.loadSubjects();
 const isOldSubjects = !rawLoadedSubjects || rawLoadedSubjects.some((s) => s.id === 'sub_mat' || s.id === 'sub_kelajak');
@@ -75,7 +96,7 @@ const loadedRooms = storageService.loadRooms() || INITIAL_ROOMS;
 const loadedTheme = storageService.loadTheme() || 'light';
 const loadedLanguage = storageService.loadLanguage() || 'ru';
 
-if (isOldTeachers) storageService.saveTeachers(INITIAL_TEACHERS);
+storageService.saveTeachers(loadedTeachers);
 if (isOldSubjects) storageService.saveSubjects(INITIAL_SUBJECTS);
 if (isOldClasses) storageService.saveClasses(INITIAL_CLASSES);
 

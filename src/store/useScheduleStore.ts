@@ -72,7 +72,10 @@ import { INITIAL_CLASSES, INITIAL_ROOMS, INITIAL_SETTINGS, INITIAL_SUBJECTS, INI
 
 const getInitialSchedule = (): Schedule | null => {
   const loaded = storageService.loadSchedule();
-  if (loaded && loaded.entries && loaded.entries.length >= 50) {
+  const hasNasibaLateLessons = loaded?.entries?.some(
+    (e) => e.teacherId === 'tch_nasiba' && e.period > 5
+  );
+  if (loaded && loaded.entries && loaded.entries.length >= 50 && !hasNasibaLateLessons) {
     return loaded;
   }
   const solveRes = solveCSP(INITIAL_TEACHERS, INITIAL_CLASSES, INITIAL_SUBJECTS, INITIAL_ROOMS, INITIAL_SETTINGS);

@@ -91,6 +91,13 @@ export const AvailabilityMatrix: React.FC<AvailabilityMatrixProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setPeriodRange(1, 5)}
+            className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 hover:bg-indigo-100 font-bold cursor-pointer"
+          >
+            {language === 'uz' ? '5 dars (1–5)' : '5 уроков (1–5)'}
+          </button>
+          <button
+            type="button"
             onClick={() => setPeriodRange(4, maxPeriod)}
             className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 hover:bg-amber-100 font-bold cursor-pointer"
           >

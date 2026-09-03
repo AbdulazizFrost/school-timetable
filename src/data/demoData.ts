@@ -278,8 +278,15 @@ export const INITIAL_TEACHERS: Teacher[] = [
     shortName: 'Nasiba S.',
     subjectIds: ['kelajak-darsi', 'nutq-ostirish', 'matematika', 'ijtimoiy-fan', 'tarbiya'],
     weeklyLoad: 19,
-    maxLessonsPerDay: 6,
-    availability: makeFullAvailability(),
+    maxLessonsPerDay: 5,
+    availability: {
+      '1-1': true, '1-2': true, '1-3': true, '1-4': true, '1-5': true, '1-6': false, '1-7': false,
+      '2-1': true, '2-2': true, '2-3': true, '2-4': true, '2-5': true, '2-6': false, '2-7': false,
+      '3-1': true, '3-2': true, '3-3': true, '3-4': true, '3-5': true, '3-6': false, '3-7': false,
+      '4-1': true, '4-2': true, '4-3': true, '4-4': true, '4-5': true, '4-6': false, '4-7': false,
+      '5-1': true, '5-2': true, '5-3': true, '5-4': true, '5-5': true, '5-6': false, '5-7': false,
+      '6-1': false, '6-2': false, '6-3': false, '6-4': false, '6-5': false, '6-6': false, '6-7': false,
+    },
     color: '#2563eb',
     classAllocations: [
       { id: 'alloc_nasiba_kela', classId: 'cls_2a', subjectId: 'kelajak-darsi', lessonsPerWeek: 1 },
