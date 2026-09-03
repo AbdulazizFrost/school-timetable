@@ -60,6 +60,7 @@ interface ScheduleState {
   toggleEntryLock: (entryId: string) => void;
   cloneSchedule: () => void;
   clearSchedule: () => void;
+  adjustScheduleForTeacher: (teacherId: string) => void;
 
   // History Actions
   undo: () => void;
@@ -845,4 +846,166 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     storageService.saveSchedule(null);
     set({ schedule: null, undoStack: [], redoStack: [] });
   },
+
+  adjustScheduleForTeacher: (teacherId: string) => {
+    const { schedule, pushHistory } = get();
+    if (!schedule || !schedule.entries) return;
+
+    const schoolStore = useSchoolStore.getState();
+    const teacher = schoolStore.teachers.find((t) => t.id === teacherId);
+    if (!teacher) return;
+
+    const currentEntries = [...schedule.entries];
+    let hasChanges = false;
+    const workingDays = schoolStore.settings.workingDays;
+    const maxP = teacher.maxLessonsPerDay || 5;
+
+    const updatedEntries = currentEntries.map((entry) => {
+      if (entry.teacherId !== teacherId) return entry;
+
+      const slotKey = `${entry.day}-${entry.period}`;
+      const isForbidden = teacher.availability && teacher.availability[slotKey] === false;
+      const isOverMax = entry.period > maxP;
+
+      if (isForbidden || isOverMax) {
+        // Find a free valid slot (1..maxP) for this class & teacher
+        for (const day of workingDays) {
+          for (let p = 1; p <= maxP; p++) {
+            const candidateKey = `${day}-${p}`;
+            if (teacher.availability && teacher.availability[candidateKey] === false) continue;
+
+            const teacherBusy = currentEntries.some(
+              (e) => e.id !== entry.id && e.teacherId === teacherId && e.day === day && e.period === p
+            );
+            if (teacherBusy) continue;
+
+            const classBusy = currentEntries.some(
+              (e) => e.id !== entry.id && e.classId === entry.classId && e.day === day && e.period === p
+            );
+            if (classBusy) continue;
+
+            hasChanges = true;
+            return {
+              ...entry,
+              day,
+              period: p,
+            };
+          }
+        }
+      }
+      return entry;
+    });
+
+    if (hasChanges) {
+      pushHistory(updatedEntries);
+      auditService.logAction({
+        actionType: 'schedule_move',
+        title: `Авто-адаптация расписания под учителя: ${teacher.fullName}`,
+        description: `Уроки перемещены в разрешённые часы согласно обновлённому графику (макс. ${maxP} ур.)`,
+      });
+    }
+  },
 }));
+
+// Subscribe to remote schedule updates from team collaborators
+realtimeSyncService.onRemoteSchedule((newEntries) => {
+  const currentSchedule = useScheduleStore.getState().schedule;
+  if (!currentSchedule) return;
+
+  const schoolStore = useSchoolStore.getState();
+  const hardCheck = checkHardConstraints(
+    newEntries,
+    schoolStore.teachers,
+    schoolStore.classes,
+    schoolStore.subjects,
+    schoolStore.rooms,
+    schoolStore.settings
+  );
+  const score = calculateScheduleScore(
+    newEntries,
+    schoolStore.teachers,
+    schoolStore.classes,
+    schoolStore.subjects,
+    schoolStore.rooms,
+    schoolStore.settings
+  );
+
+  const updatedSchedule: Schedule = {
+    ...currentSchedule,
+    entries: newEntries,
+    score,
+    conflicts: hardCheck.conflicts,
+    updatedAt: new Date().toISOString(),
+  };
+
+  storageService.saveSchedule(updatedSchedule);
+  useScheduleStore.setState({ schedule: updatedSchedule });
+});
+
+// Respond to full sync requests from new collaborators
+realtimeSyncService.onRequestSync((requesterId) => {
+  const currentSchedule = useScheduleStore.getState().schedule;
+  const schoolStore = useSchoolStore.getState();
+  if (currentSchedule) {
+    realtimeSyncService.respondFullSync(requesterId, {
+      schedule: currentSchedule,
+      schoolData: {
+        teachers: schoolStore.teachers,
+        classes: schoolStore.classes,
+        subjects: schoolStore.subjects,
+        rooms: schoolStore.rooms,
+        settings: schoolStore.settings,
+      },
+    });
+  }
+});
+
+// Full sync response handler for new collaborators
+realtimeSyncService.onRemoteSyncResponse((state) => {
+  if (state.schedule) {
+    const schoolStore = useSchoolStore.getState();
+    const entries = state.schedule.entries || state.schedule;
+    if (Array.isArray(entries)) {
+      const hardCheck = checkHardConstraints(
+        entries,
+        schoolStore.teachers,
+        schoolStore.classes,
+        schoolStore.subjects,
+        schoolStore.rooms,
+        schoolStore.settings
+      );
+      const score = calculateScheduleScore(
+        entries,
+        schoolStore.teachers,
+        schoolStore.classes,
+        schoolStore.subjects,
+        schoolStore.rooms,
+        schoolStore.settings
+      );
+      const syncedSchedule: Schedule = {
+        id: `sch_synced_${Date.now()}`,
+        name: 'Расписание совместной работы',
+        version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        entries,
+        score,
+        conflicts: hardCheck.conflicts,
+      };
+      storageService.saveSchedule(syncedSchedule);
+      useScheduleStore.setState({ schedule: syncedSchedule });
+    }
+  }
+});
+
+// Global event listener for teacher availability auto-adjustment
+if (typeof window !== 'undefined') {
+  window.addEventListener('teacher_schedule_adjust', (e: any) => {
+    const teacherId = e.detail?.teacherId;
+    if (teacherId) {
+      useScheduleStore.getState().adjustScheduleForTeacher(teacherId);
+    }
+  });
+}
+
+

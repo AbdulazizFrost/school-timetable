@@ -14,27 +14,47 @@ export interface RealtimePeer {
   city?: string;
 }
 
+export type RealtimeMessageType =
+  | 'HEARTBEAT'
+  | 'ACTION'
+  | 'SCHEDULE_SYNC'
+  | 'SCHOOL_DATA_SYNC'
+  | 'REQUEST_FULL_SYNC'
+  | 'RESPONSE_FULL_SYNC';
+
 export interface RealtimeBroadcastMessage {
-  type: 'HEARTBEAT' | 'ACTION' | 'SCHEDULE_SYNC';
+  type: RealtimeMessageType;
+  roomId: string;
   peer: Omit<RealtimePeer, 'isMe'>;
+  targetClientId?: string; // If direct reply to specific peer
   actionTitle?: string;
   actionDetails?: string;
   scheduleEntries?: ScheduleEntry[];
+  schoolData?: any;
   conflictsCount?: number;
   time: number;
 }
 
-const SYNC_TOPIC = 'school_live_timetable_abdulaziz_main';
 const STORAGE_KEY_CLIENT_ID = 'school_realtime_client_id';
+const STORAGE_KEY_ROOM_ID = 'school_teamwork_room_id';
+const DEFAULT_ROOM_ID = 'school_team_777';
 
 class RealtimeSyncService {
   private clientId: string = '';
+  private roomId: string = DEFAULT_ROOM_ID;
   private ip: string = 'Загрузка...';
   private locationInfo: string = '';
   private activePeers: Map<string, RealtimePeer> = new Map();
   private subscribers: Set<(peers: RealtimePeer[], latestSchedule?: ScheduleEntry[], lastAction?: string) => void> = new Set();
+  
+  // Remote sync listeners
+  private scheduleListeners: Set<(entries: ScheduleEntry[], actionTitle?: string) => void> = new Set();
+  private schoolDataListeners: Set<(data: any, actionTitle?: string) => void> = new Set();
+  private syncRequestListeners: Set<(requesterId: string) => void> = new Set();
+  private syncResponseListeners: Set<(state: { schedule?: any; schoolData?: any }) => void> = new Set();
+
   private currentActivePage: string = 'dashboard';
-  private lastActionText: string = 'Вошёл в приложение';
+  private lastActionText: string = 'Вошёл в проект';
   private heartbeatInterval: any = null;
   private pollInterval: any = null;
   private sseSource: EventSource | null = null;
@@ -47,7 +67,7 @@ class RealtimeSyncService {
   }
 
   private initClient() {
-    // Generate persistent client ID for this browser tab/session
+    // 1. Client ID
     let storedId = sessionStorage.getItem(STORAGE_KEY_CLIENT_ID);
     if (!storedId) {
       storedId = `user_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString().slice(-4)}`;
@@ -55,12 +75,90 @@ class RealtimeSyncService {
     }
     this.clientId = storedId;
 
-    // Fetch real IP
+    // 2. Room ID from URL ?room=... or localStorage
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlRoom = urlParams.get('room');
+      if (urlRoom && urlRoom.trim()) {
+        this.roomId = urlRoom.trim();
+        localStorage.setItem(STORAGE_KEY_ROOM_ID, this.roomId);
+      } else {
+        const storedRoom = localStorage.getItem(STORAGE_KEY_ROOM_ID);
+        if (storedRoom) {
+          this.roomId = storedRoom;
+        } else {
+          this.roomId = DEFAULT_ROOM_ID;
+          localStorage.setItem(STORAGE_KEY_ROOM_ID, this.roomId);
+        }
+      }
+    } catch {
+      this.roomId = DEFAULT_ROOM_ID;
+    }
+
+    // 3. Fetch real IP & Geo
     this.fetchRealIp();
 
-    // Start Realtime SSE connection and Heartbeat
-    this.startListening();
-    this.startHeartbeat();
+    // 4. Start connection
+    this.connectRoom(this.roomId);
+  }
+
+  public getRoomId(): string {
+    return this.roomId;
+  }
+
+  public getClientId(): string {
+    return this.clientId;
+  }
+
+  public getInviteUrl(): string {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${window.location.pathname}?room=${this.roomId}`;
+  }
+
+  public setRoomId(newRoom: string) {
+    if (!newRoom || newRoom === this.roomId) return;
+    this.roomId = newRoom.trim();
+    localStorage.setItem(STORAGE_KEY_ROOM_ID, this.roomId);
+
+    // Update URL query parameter without full reload
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('room', this.roomId);
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+
+    this.connectRoom(this.roomId);
+  }
+
+  private connectRoom(room: string) {
+    if (this.sseSource) {
+      try {
+        this.sseSource.close();
+      } catch {}
+      this.sseSource = null;
+    }
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+
+    this.activePeers.clear();
+
+    const topic = `school_collab_${room}`;
+
+    // Start SSE
+    this.startListening(topic);
+    // Start Heartbeat
+    this.startHeartbeat(topic);
+
+    // Request full state sync from any existing peer in the room
+    setTimeout(() => {
+      this.requestFullSync();
+    }, 1500);
   }
 
   private async fetchRealIp() {
@@ -74,7 +172,6 @@ class RealtimeSyncService {
       this.ip = '84.54.71.225';
     }
 
-    // Try getting geo info
     try {
       const geoRes = await fetch(`https://ipapi.co/${this.ip}/json/`);
       if (geoRes.ok) {
@@ -92,7 +189,7 @@ class RealtimeSyncService {
 
   public getDeviceInfo(): { device: string; browser: string; resolution: string } {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-      return { device: 'PC', browser: 'Web', resolution: '1920x1080' };
+      return { device: 'ПК / Компьютер', browser: 'Web', resolution: '1920x1080' };
     }
 
     const ua = navigator.userAgent;
@@ -130,32 +227,35 @@ class RealtimeSyncService {
   }
 
   private async sendPayload(payload: RealtimeBroadcastMessage) {
+    const topic = `school_collab_${this.roomId}`;
     try {
-      await fetch(`https://ntfy.sh/${SYNC_TOPIC}`, {
+      await fetch(`https://ntfy.sh/${topic}`, {
         method: 'POST',
         headers: {
-          'Title': payload.type,
-          'Priority': payload.type === 'ACTION' ? 'high' : 'low',
+          Title: payload.type,
+          Priority: payload.type === 'ACTION' || payload.type === 'SCHEDULE_SYNC' ? 'high' : 'low',
         },
         body: JSON.stringify(payload),
       });
     } catch (e) {
-      // ignore network hiccups
+      // network hiccup
     }
   }
 
-  private startHeartbeat() {
-    // Send immediate heartbeat
+  private startHeartbeat(topic: string) {
+    // Initial heartbeat
     this.sendPayload({
       type: 'HEARTBEAT',
+      roomId: this.roomId,
       peer: this.getMyPeer(),
       time: Date.now(),
     });
 
-    // Loop every 6 seconds
+    // Send heartbeat every 6 seconds
     this.heartbeatInterval = setInterval(() => {
       this.sendPayload({
         type: 'HEARTBEAT',
+        roomId: this.roomId,
         peer: this.getMyPeer(),
         time: Date.now(),
       });
@@ -163,10 +263,9 @@ class RealtimeSyncService {
     }, 6000);
   }
 
-  private startListening() {
+  private startListening(topic: string) {
     try {
-      // Connect using Server-Sent Events (SSE) for instant sub-second delivery
-      this.sseSource = new EventSource(`https://ntfy.sh/${SYNC_TOPIC}/sse`);
+      this.sseSource = new EventSource(`https://ntfy.sh/${topic}/sse`);
       this.sseSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -177,19 +276,18 @@ class RealtimeSyncService {
         } catch {}
       };
       this.sseSource.onerror = () => {
-        // If SSE fails or drops, start fallback JSON polling
-        this.fallbackPolling();
+        this.fallbackPolling(topic);
       };
     } catch {
-      this.fallbackPolling();
+      this.fallbackPolling(topic);
     }
   }
 
-  private fallbackPolling() {
+  private fallbackPolling(topic: string) {
     if (this.pollInterval) return;
     this.pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`https://ntfy.sh/${SYNC_TOPIC}/json?poll=1&since=20s`);
+        const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=20s`);
         if (res.ok) {
           const text = await res.text();
           const lines = text.trim().split('\n');
@@ -204,7 +302,7 @@ class RealtimeSyncService {
           });
         }
       } catch {}
-    }, 4000);
+    }, 3500);
   }
 
   private handleIncomingMessage(msg: RealtimeBroadcastMessage) {
@@ -219,8 +317,42 @@ class RealtimeSyncService {
 
     this.activePeers.set(peer.clientId, peer);
 
-    if (msg.scheduleEntries && !isMe) {
+    if (isMe) {
+      // Ignore own actions
+      return;
+    }
+
+    // Direct targeted message check
+    if (msg.targetClientId && msg.targetClientId !== this.clientId) {
+      return;
+    }
+
+    // Handle full sync request from a new peer
+    if (msg.type === 'REQUEST_FULL_SYNC') {
+      this.syncRequestListeners.forEach((cb) => cb(msg.peer.clientId));
+      return;
+    }
+
+    // Handle full sync response
+    if (msg.type === 'RESPONSE_FULL_SYNC' && msg.schoolData) {
+      this.syncResponseListeners.forEach((cb) =>
+        cb({ schedule: msg.scheduleEntries, schoolData: msg.schoolData })
+      );
+      if (msg.scheduleEntries) {
+        this.latestRemoteSchedule = msg.scheduleEntries;
+      }
+      return;
+    }
+
+    // Handle schedule update
+    if (msg.scheduleEntries && (msg.type === 'SCHEDULE_SYNC' || msg.type === 'ACTION')) {
       this.latestRemoteSchedule = msg.scheduleEntries;
+      this.scheduleListeners.forEach((cb) => cb(msg.scheduleEntries!, msg.actionTitle));
+    }
+
+    // Handle school data update (teachers, classes, etc.)
+    if (msg.schoolData && msg.type === 'SCHOOL_DATA_SYNC') {
+      this.schoolDataListeners.forEach((cb) => cb(msg.schoolData, msg.actionTitle));
     }
 
     this.cleanExpiredPeers();
@@ -229,14 +361,12 @@ class RealtimeSyncService {
 
   private cleanExpiredPeers() {
     const now = Date.now();
-    // A peer is considered online if seen in last 25 seconds
     this.activePeers.forEach((peer, key) => {
-      if (now - peer.lastSeen > 25000 && !peer.isMe) {
+      if (now - peer.lastSeen > 22000 && !peer.isMe) {
         this.activePeers.delete(key);
       }
     });
 
-    // Make sure 'me' is always in active peers
     const myPeer: RealtimePeer = {
       ...this.getMyPeer(),
       isMe: true,
@@ -258,7 +388,6 @@ class RealtimeSyncService {
     callback: (peers: RealtimePeer[], latestSchedule?: ScheduleEntry[], lastAction?: string) => void
   ) {
     this.subscribers.add(callback);
-    // Immediate call with current state
     this.cleanExpiredPeers();
     callback(Array.from(this.activePeers.values()), this.latestRemoteSchedule || undefined);
 
@@ -268,12 +397,13 @@ class RealtimeSyncService {
   }
 
   /**
-   * Broadcast an action and the current schedule state over the network
+   * Broadcast an action and updated schedule to all room members
    */
   public broadcastAction(actionTitle: string, actionDetails: string, scheduleEntries?: ScheduleEntry[]) {
     this.lastActionText = actionTitle;
     const payload: RealtimeBroadcastMessage = {
       type: 'ACTION',
+      roomId: this.roomId,
       peer: this.getMyPeer(),
       actionTitle,
       actionDetails,
@@ -281,7 +411,6 @@ class RealtimeSyncService {
       time: Date.now(),
     };
 
-    // Update local self peer
     this.activePeers.set(this.clientId, {
       ...this.getMyPeer(),
       isMe: true,
@@ -290,6 +419,80 @@ class RealtimeSyncService {
 
     this.sendPayload(payload);
     this.notifySubscribers(actionTitle);
+  }
+
+  /**
+   * Broadcast updated school data (teachers, classes, etc.) to all room members
+   */
+  public broadcastSchoolData(schoolData: any, actionTitle: string) {
+    this.lastActionText = actionTitle;
+    const payload: RealtimeBroadcastMessage = {
+      type: 'SCHOOL_DATA_SYNC',
+      roomId: this.roomId,
+      peer: this.getMyPeer(),
+      actionTitle,
+      schoolData,
+      time: Date.now(),
+    };
+
+    this.sendPayload(payload);
+    this.notifySubscribers(actionTitle);
+  }
+
+  /**
+   * Request full sync from room peers when joining
+   */
+  public requestFullSync() {
+    this.sendPayload({
+      type: 'REQUEST_FULL_SYNC',
+      roomId: this.roomId,
+      peer: this.getMyPeer(),
+      time: Date.now(),
+    });
+  }
+
+  /**
+   * Respond to full sync request
+   */
+  public respondFullSync(targetClientId: string, fullState: { schedule?: any; schoolData?: any }) {
+    this.sendPayload({
+      type: 'RESPONSE_FULL_SYNC',
+      roomId: this.roomId,
+      targetClientId,
+      peer: this.getMyPeer(),
+      scheduleEntries: fullState.schedule?.entries || fullState.schedule,
+      schoolData: fullState.schoolData,
+      time: Date.now(),
+    });
+  }
+
+  // Remote listeners registration
+  public onRemoteSchedule(cb: (entries: ScheduleEntry[], actionTitle?: string) => void) {
+    this.scheduleListeners.add(cb);
+    return () => {
+      this.scheduleListeners.delete(cb);
+    };
+  }
+
+  public onRemoteSchoolData(cb: (data: any, actionTitle?: string) => void) {
+    this.schoolDataListeners.add(cb);
+    return () => {
+      this.schoolDataListeners.delete(cb);
+    };
+  }
+
+  public onRequestSync(cb: (requesterId: string) => void) {
+    this.syncRequestListeners.add(cb);
+    return () => {
+      this.syncRequestListeners.delete(cb);
+    };
+  }
+
+  public onRemoteSyncResponse(cb: (state: { schedule?: any; schoolData?: any }) => void) {
+    this.syncResponseListeners.add(cb);
+    return () => {
+      this.syncResponseListeners.delete(cb);
+    };
   }
 
   public getOnlinePeers(): RealtimePeer[] {
@@ -303,3 +506,4 @@ class RealtimeSyncService {
 }
 
 export const realtimeSyncService = new RealtimeSyncService();
+

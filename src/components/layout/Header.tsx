@@ -9,11 +9,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   Globe,
+  Users,
 } from 'lucide-react';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
+import { realtimeSyncService } from '../../services/realtimeSyncService';
 import { Button } from '../common/Button';
 import { exportService } from '../../services/exportService';
+import { TeamworkModal } from '../collaborative/TeamworkModal';
 
 export interface HeaderProps {
   onOpenBackup: () => void;
@@ -24,6 +27,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBackup, onOpenSettings }) 
   const { settings, teachers, classes, subjects, rooms, validation, loadDemoData, language, setLanguage, t } =
     useSchoolStore();
   const { schedule, generateSchedule, isGenerating } = useScheduleStore();
+
+  const [isTeamworkOpen, setIsTeamworkOpen] = React.useState<boolean>(false);
+  const [onlineCount, setOnlineCount] = React.useState<number>(1);
+
+  React.useEffect(() => {
+    const unsub = realtimeSyncService.subscribe((peers) => {
+      setOnlineCount(peers.length);
+    });
+    return () => unsub();
+  }, []);
 
   const handleExportExcel = () => {
     if (!schedule) return;
@@ -148,6 +161,22 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBackup, onOpenSettings }) 
           <Download className="w-3.5 h-3.5" />
         </Button>
 
+        {/* Collaborative Teamwork Button */}
+        <button
+          onClick={() => setIsTeamworkOpen(true)}
+          title={language === 'uz' ? "Jamoaviy ishlash (2 kishi birga sozlash)" : "Совместная работа (2 человека вместе)"}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-all cursor-pointer shadow-xs"
+        >
+          <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <span className="hidden sm:inline">{language === 'uz' ? "Birga ishlash" : "Совместно"}</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          {onlineCount > 1 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[9.5px] bg-indigo-600 text-white font-black">
+              {onlineCount}
+            </span>
+          )}
+        </button>
+
         {/* Primary Generate Button */}
         <Button
           variant="primary"
@@ -166,6 +195,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBackup, onOpenSettings }) 
           </span>
         </Button>
       </div>
+
+      {isTeamworkOpen && (
+        <TeamworkModal
+          isOpen={isTeamworkOpen}
+          onClose={() => setIsTeamworkOpen(false)}
+        />
+      )}
     </header>
   );
 };

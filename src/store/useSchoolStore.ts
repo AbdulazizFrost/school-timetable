@@ -11,6 +11,7 @@ import {
 import { validateSchoolData } from '../scheduler/validator';
 import { ProjectBackupData, storageService } from '../services/storageService';
 import { auditService } from '../services/auditService';
+import { realtimeSyncService } from '../services/realtimeSyncService';
 import { Language, getTranslation, translations } from '../i18n/translations';
 
 interface SchoolState {
@@ -241,6 +242,18 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
       title: 'Изменение данных учителя',
       description: `Изменены данные преподавателя ${teacherData.fullName || prevTeacher?.fullName || id}`,
     });
+
+    if (teacherData.availability || teacherData.maxLessonsPerDay) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('teacher_schedule_adjust', { detail: { teacherId: id } }));
+      }
+    }
+
+    realtimeSyncService.broadcastSchoolData(
+      { teachers: updatedTeachers, classes: updatedClasses },
+      `Изменён преподаватель: ${teacherData.fullName || prevTeacher?.fullName || id}`
+    );
+
     set({ teachers: updatedTeachers, classes: updatedClasses, validation });
   },
 
@@ -577,3 +590,60 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     });
   },
 }));
+
+// Remote school data sync handler
+realtimeSyncService.onRemoteSchoolData((data) => {
+  if (!data) return;
+  const current = useSchoolStore.getState();
+  const nextTeachers = data.teachers || current.teachers;
+  const nextClasses = data.classes || current.classes;
+  const nextSubjects = data.subjects || current.subjects;
+  const nextRooms = data.rooms || current.rooms;
+  const nextSettings = data.settings || current.settings;
+
+  if (data.teachers) storageService.saveTeachers(data.teachers);
+  if (data.classes) storageService.saveClasses(data.classes);
+  if (data.subjects) storageService.saveSubjects(data.subjects);
+  if (data.rooms) storageService.saveRooms(data.rooms);
+  if (data.settings) storageService.saveSettings(data.settings);
+
+  const validation = validateSchoolData(nextTeachers, nextClasses, nextSubjects, nextRooms, nextSettings);
+  useSchoolStore.setState({
+    teachers: nextTeachers,
+    classes: nextClasses,
+    subjects: nextSubjects,
+    rooms: nextRooms,
+    settings: nextSettings,
+    validation,
+  });
+});
+
+// Full state sync response handler for school data
+realtimeSyncService.onRemoteSyncResponse((state) => {
+  if (state.schoolData) {
+    const data = state.schoolData;
+    const current = useSchoolStore.getState();
+    const nextTeachers = data.teachers || current.teachers;
+    const nextClasses = data.classes || current.classes;
+    const nextSubjects = data.subjects || current.subjects;
+    const nextRooms = data.rooms || current.rooms;
+    const nextSettings = data.settings || current.settings;
+
+    if (data.teachers) storageService.saveTeachers(data.teachers);
+    if (data.classes) storageService.saveClasses(data.classes);
+    if (data.subjects) storageService.saveSubjects(data.subjects);
+    if (data.rooms) storageService.saveRooms(data.rooms);
+    if (data.settings) storageService.saveSettings(data.settings);
+
+    const validation = validateSchoolData(nextTeachers, nextClasses, nextSubjects, nextRooms, nextSettings);
+    useSchoolStore.setState({
+      teachers: nextTeachers,
+      classes: nextClasses,
+      subjects: nextSubjects,
+      rooms: nextRooms,
+      settings: nextSettings,
+      validation,
+    });
+  }
+});
+
