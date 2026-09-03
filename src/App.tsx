@@ -11,12 +11,53 @@ import { ClassroomsPage } from './components/classrooms/ClassroomsPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { SecretAuditModal } from './components/secret/SecretAuditModal';
 import { realtimeSyncService } from './services/realtimeSyncService';
+import { cloudShareService } from './services/cloudShareService';
+import { storageService } from './services/storageService';
 import { useSchoolStore } from './store/useSchoolStore';
+import { useScheduleStore } from './store/useScheduleStore';
 
 export function App() {
   const [currentSection, setCurrentSection] = useState<NavSection>('dashboard');
   const [isSecretAuditOpen, setIsSecretAuditOpen] = useState<boolean>(false);
-  const { theme, setTheme } = useSchoolStore();
+  const [sharedLoadStatus, setSharedLoadStatus] = useState<string | null>(null);
+  const { theme, setTheme, importProject } = useSchoolStore();
+
+  // Auto-load colleague's schedule if opened via ?share=... link
+  useEffect(() => {
+    const shareId = cloudShareService.getShareIdFromUrl();
+    if (shareId) {
+      setSharedLoadStatus('Загрузка расписания коллеги из облака...');
+      cloudShareService
+        .loadProject(shareId)
+        .then((project) => {
+          importProject({
+            version: '1.0',
+            exportedAt: project.createdAt,
+            settings: project.schoolData.settings,
+            teachers: project.schoolData.teachers,
+            classes: project.schoolData.classes,
+            subjects: project.schoolData.subjects,
+            rooms: project.schoolData.rooms,
+            schedule: project.schedule,
+          });
+          useScheduleStore.setState({ schedule: project.schedule });
+          storageService.saveSchedule(project.schedule);
+
+          setSharedLoadStatus(
+            `✅ Вы успешно перешли в расписание коллеги! Загружено ${project.schedule.entries.length} уроков.`
+          );
+          setCurrentSection('schedule');
+
+          setTimeout(() => {
+            setSharedLoadStatus(null);
+          }, 6000);
+        })
+        .catch((err) => {
+          setSharedLoadStatus(`❌ Ошибка загрузки расписания: ${err.message}`);
+          setTimeout(() => setSharedLoadStatus(null), 6000);
+        });
+    }
+  }, []);
 
   // Initialize theme on mount
   useEffect(() => {
@@ -63,6 +104,14 @@ export function App() {
 
   return (
     <>
+      {/* Toast Notification when entering Colleague's Schedule */}
+      {sharedLoadStatus && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] px-5 py-3 rounded-2xl bg-slate-900/95 text-white shadow-2xl border border-indigo-500/60 backdrop-blur-md flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-4">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span>{sharedLoadStatus}</span>
+        </div>
+      )}
+
       <Layout currentSection={currentSection} onNavigate={setCurrentSection}>
         {currentSection === 'dashboard' && <DashboardPage onNavigate={setCurrentSection} />}
         {currentSection === 'schedule' && <SchedulePage />}
