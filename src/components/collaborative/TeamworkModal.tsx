@@ -231,70 +231,73 @@ export const TeamworkModal: React.FC<TeamworkModalProps> = ({ isOpen, onClose })
         {/* ========================================================================= */}
         {/* 2. SHARE MY SCHEDULE (ОТПРАВИТЬ СВОЁ РАСПИСАНИЕ КОЛЛЕГЕ) */}
         {/* ========================================================================= */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900 shrink-0">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                  {isUz ? "📤 O'z jadvalingiz havolasini hamkasbga yuborish" : "📤 Отправить своё расписание коллеге"}
-                </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {isUz
-                    ? "Havola yarating va hamkasbingizga yuboring — u sizning ishingizga kiradi"
-                    : "Создайте готовую ссылку для коллеги — открыв её, он сразу попадёт в вашу работу"}
-                </p>
-              </div>
+        <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border-2 border-blue-400 dark:border-blue-800 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
+              <Share2 className="w-4 h-4" />
             </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                {isUz ? "📤 O'z jadvalingiz havolasini hamkasbga yuborish" : "📤 Ваша ссылка для отправки коллеге"}
+              </h4>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                {isUz
+                  ? "Ushbu havolani nusxalang va hamkasbingizga yuboring — u sizning ishingizga kiradi"
+                  : "Скопируйте эту ссылку и отправьте коллеге в Telegram или WhatsApp — он откроет её и сразу попадёт в ваше расписание"}
+              </p>
+            </div>
+          </div>
 
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+            <input
+              type="text"
+              readOnly
+              value={shareUrl || inviteUrl}
+              className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-300 font-bold select-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <Button
-              size="sm"
-              onClick={handleGenerateShareLink}
-              disabled={isSharing}
-              isLoading={isSharing}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-xs flex items-center gap-1.5"
+              onClick={() => {
+                const targetUrl = shareUrl || inviteUrl;
+                navigator.clipboard.writeText(targetUrl);
+                setShareCopied(true);
+                setTimeout(() => setShareCopied(false), 4000);
+
+                // If not yet uploaded to cloud, upload in background for cloud redundancy
+                if (!shareUrl && schedule) {
+                  handleGenerateShareLink();
+                }
+              }}
+              className={cn(
+                'px-5 py-2.5 text-xs font-black flex items-center justify-center gap-2 shrink-0 transition-all shadow-md cursor-pointer',
+                shareCopied
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              )}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{isUz ? "Havola yaratish" : "Создать ссылку"}</span>
+              {shareCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <span>
+                {shareCopied
+                  ? isUz ? "✓ Nusxalandi!" : "✓ Скопировано!"
+                  : isUz ? "📋 Havolani nusxalash" : "📋 Скопировать ссылку"}
+              </span>
             </Button>
           </div>
 
-          {shareUrl && (
-            <div className="space-y-2 pt-1 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold select-all"
-                />
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl);
-                    setShareCopied(true);
-                    setTimeout(() => setShareCopied(false), 3000);
-                  }}
-                  className={cn(
-                    'px-4 py-2 text-xs font-black flex items-center gap-1.5 shrink-0 transition-all',
-                    shareCopied
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  )}
-                >
-                  {shareCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>
-                    {shareCopied
-                      ? isUz ? "Nusxalandi!" : "Скопировано!"
-                      : isUz ? "Nusxalash" : "Скопировать"}
-                  </span>
-                </Button>
-              </div>
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                ✓ {isUz ? "Havola tayyor! Uni hamkasbingizga yuboring." : "Ссылка готова! Отправьте её коллеге в Telegram или WhatsApp."}
-              </p>
+          {shareCopied ? (
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2 animate-in fade-in">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                {isUz
+                  ? "Havola nusxalandi! Endi Telegram yoki WhatsApp'da xabar yozish joyiga «Вставить» (Ctrl + V) qiling."
+                  : "✓ Ссылка скопирована в буфер обмена! Теперь откройте Telegram или WhatsApp и нажмите «Вставить» (Ctrl + V)."}
+              </span>
             </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              💡 {isUz
+                ? "Ko'k tugmani bosing — havola nusxalanadi va uni ikkinchi odamga jo'nating."
+                : "Нажмите синюю кнопку «📋 Скопировать ссылку», а затем отправьте её коллеге."}
+            </p>
           )}
         </div>
 
