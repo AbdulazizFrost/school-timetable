@@ -12,12 +12,13 @@ import {
   BookOpen,
   Settings,
   AlertCircle,
+  Radio,
 } from 'lucide-react';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { cn } from '../common/Button';
 
-export type NavSection = 'dashboard' | 'schedule' | 'teachers' | 'classes' | 'subjects' | 'rooms' | 'settings';
+export type NavSection = 'dashboard' | 'schedule' | 'observer' | 'teachers' | 'classes' | 'subjects' | 'rooms' | 'settings';
 
 export interface SidebarProps {
   currentSection: NavSection;
@@ -41,6 +42,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentSection, onNavigate, co
       icon: <Calendar className="w-5 h-5" />,
       badge: schedule ? `${schedule.entries.length} ${t('lesson')}` : undefined,
       alertBadge: schedule && schedule.conflicts.length > 0 ? schedule.conflicts.length : undefined,
+    },
+    {
+      id: 'observer' as NavSection,
+      label: t('nav_observer') || (language === 'uz' ? 'Kuzatuvchi' : 'Наблюдатель'),
+      icon: <Radio className="w-5 h-5 text-emerald-500 animate-pulse" />,
+      badge: 'LIVE',
     },
     {
       id: 'teachers' as NavSection,

@@ -11,6 +11,7 @@ export const translations = {
     nav_classes: 'Классы',
     nav_subjects: 'Предметы',
     nav_rooms: 'Кабинеты',
+    nav_observer: 'Наблюдатель',
     nav_settings: 'Настройки',
 
     // Common Actions
@@ -173,6 +174,7 @@ export const translations = {
     nav_classes: 'Sinflar',
     nav_subjects: 'Fanlar',
     nav_rooms: 'Xonalar',
+    nav_observer: 'Kuzatuvchi',
     nav_settings: 'Sozlamalar',
 
     // Common Actions

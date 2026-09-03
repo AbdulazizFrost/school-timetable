@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
   BookOpen,
+  Radio,
 } from 'lucide-react';
 import { NavSection } from './Sidebar';
 import { cn } from '../common/Button';
@@ -32,9 +33,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({ currentSection, onNavigate
       icon: <Calendar className="w-5 h-5" />,
       hasAlert: schedule && schedule.conflicts.length > 0,
     },
+    {
+      id: 'observer' as NavSection,
+      label: isUz ? 'Kuzatuv' : 'Эфир',
+      icon: <Radio className="w-5 h-5 text-emerald-500" />,
+    },
     { id: 'teachers' as NavSection, label: isUz ? "O'qituvchi" : 'Учителя', icon: <Users className="w-5 h-5" /> },
     { id: 'classes' as NavSection, label: isUz ? 'Sinflar' : 'Классы', icon: <GraduationCap className="w-5 h-5" /> },
-    { id: 'subjects' as NavSection, label: isUz ? 'Fanlar' : 'Предметы', icon: <BookOpen className="w-5 h-5" /> },
     { id: 'settings' as NavSection, label: isUz ? 'Sozlama' : 'Настройки', icon: <Settings className="w-5 h-5" /> },
   ];
 
