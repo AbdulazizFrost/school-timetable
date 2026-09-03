@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Monitor,
   Smartphone,
@@ -20,6 +20,7 @@ import { ScheduleEntry } from '../../types/schedule';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { auditService } from '../../services/auditService';
+import { realtimeSyncService } from '../../services/realtimeSyncService';
 import { Button, cn } from '../common/Button';
 import { getDayName, getDayShortName } from '../../utils/timeUtils';
 
@@ -34,6 +35,17 @@ export const ScreenMirrorView: React.FC = () => {
   const [inspectedEntry, setInspectedEntry] = useState<ScheduleEntry | null>(null);
   const [showPhoneModal, setShowPhoneModal] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [remoteEntries, setRemoteEntries] = useState<ScheduleEntry[] | null>(null);
+
+  // Subscribe to live broadcast from remote editor
+  useEffect(() => {
+    const unsub = realtimeSyncService.subscribe((_peers, latestSchedule) => {
+      if (latestSchedule && latestSchedule.length > 0) {
+        setRemoteEntries(latestSchedule);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Maps for quick lookup
   const subjectMap = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects]);
@@ -42,7 +54,7 @@ export const ScreenMirrorView: React.FC = () => {
 
   // Initial snapshot before editor changes
   const initialEntries = useMemo(() => auditService.getInitialSnapshot(), [schedule]);
-  const currentEntries = useMemo(() => schedule?.entries || [], [schedule]);
+  const currentEntries = useMemo(() => remoteEntries || schedule?.entries || [], [remoteEntries, schedule]);
 
   // Modified entry IDs
   const modifiedEntryIds = useMemo(

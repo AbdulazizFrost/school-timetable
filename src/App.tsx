@@ -10,6 +10,7 @@ import { SubjectsPage } from './components/subjects/SubjectsPage';
 import { ClassroomsPage } from './components/classrooms/ClassroomsPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { SecretAuditModal } from './components/secret/SecretAuditModal';
+import { realtimeSyncService } from './services/realtimeSyncService';
 import { useSchoolStore } from './store/useSchoolStore';
 
 export function App() {
@@ -21,6 +22,11 @@ export function App() {
   useEffect(() => {
     setTheme(theme);
   }, []);
+
+  // Sync active page with realtime monitor
+  useEffect(() => {
+    realtimeSyncService.setActivePage(currentSection);
+  }, [currentSection]);
 
   // Stealth Access: Secret hotkey and custom event triggers
   useEffect(() => {

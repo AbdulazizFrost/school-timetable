@@ -21,8 +21,12 @@ import {
   Undo2,
   Monitor,
   AlertCircle,
+  Wifi,
+  Globe,
+  Radio,
 } from 'lucide-react';
 import { auditService, AuditLogEntry, EditorSession } from '../../services/auditService';
+import { realtimeSyncService, RealtimePeer } from '../../services/realtimeSyncService';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { Button, cn } from '../common/Button';
@@ -60,6 +64,16 @@ export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onCl
   // New PIN state
   const [newPinInput, setNewPinInput] = useState<string>('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState<string>('');
+
+  // Realtime Peers State
+  const [realtimePeers, setRealtimePeers] = useState<RealtimePeer[]>([]);
+
+  useEffect(() => {
+    const unsub = realtimeSyncService.subscribe((peers) => {
+      setRealtimePeers(peers);
+    });
+    return () => unsub();
+  }, []);
 
   // Reload logs on open or tick
   const refreshData = () => {
@@ -573,63 +587,163 @@ export const SecretAuditModal: React.FC<SecretAuditModalProps> = ({ isOpen, onCl
               )}
 
               {/* ========================================================================= */}
-              {/* TAB 3: WHO IS CONFIGURING (SESSION INFO) */}
+              {/* TAB 3: WHO IS CONFIGURING (REAL-TIME ONLINE DEVICES) */}
               {/* ========================================================================= */}
               {activeTab === 'session' && (
-                <div className="space-y-4 max-w-lg">
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-400 uppercase">
-                        {isUz ? "Tuzuvchi ismi" : "Имя составителя расписания:"}
+                <div className="space-y-4">
+                  {/* Live Status Header */}
+                  <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 shrink-0">
+                        <Wifi className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black tracking-wider uppercase text-emerald-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            {isUz ? "ONLAYN QURILMALARNI KUZATISH" : "ЖИВОЕ ОТСЛЕЖИВАНИЕ УСТРОЙСТВ ОНЛАЙН"}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950 text-emerald-300 font-extrabold border border-emerald-800">
+                            {realtimePeers.length} {isUz ? "ta qurilma tarmoqda" : "устройств в сети"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          {isUz
+                            ? "Dars jadvalini aynan kim ochgani va nimalarni o'zgartirayotgani real IP va qurilmasi bilan"
+                            : "Реальные IP-адреса, браузеры, экраны и действия тех, кто прямо сейчас открыл расписание"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* List of Real Online Devices */}
+                  <div className="space-y-3">
+                    {realtimePeers.map((peer) => (
+                      <div
+                        key={peer.clientId}
+                        className={cn(
+                          'p-4 rounded-2xl border transition-all space-y-3',
+                          peer.isMe
+                            ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900'
+                            : 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 shadow-md shadow-emerald-500/5'
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                            <span className="text-sm font-black text-slate-900 dark:text-white">
+                              {peer.device}
+                            </span>
+                            {peer.isMe ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-extrabold">
+                                🛡️ {isUz ? "SIZ (DIREKTOR)" : "ВЫ (ДИРЕКТОР / ЭКРАН ПРОВЕРКИ)"}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 font-extrabold border border-emerald-300">
+                                👤 {isUz ? "TUZUVCHI ONLAYN (SOZLAMOQDA)" : "СОСТАВИТЕЛЬ (НАСТРАИВАЕТ РАСПИСАНИЕ)"}
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[11px] font-mono font-bold text-slate-400">
+                            {isUz ? "Oxirgi faollik: " : "Активен: "}
+                            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                              {Math.max(1, Math.round((Date.now() - peer.lastSeen) / 1000))} сек назад
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* Details grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              {isUz ? "Haqiqiy IP manzil:" : "Реальный IP-адрес:"}
+                            </span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">
+                              {peer.ip}
+                            </span>
+                            {peer.city && (
+                              <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                                {peer.city}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              {isUz ? "Brauzer va ekran:" : "Браузер и экран:"}
+                            </span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate block">
+                              {peer.browser}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                              {peer.screenResolution}
+                            </span>
+                          </div>
+
+                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              {isUz ? "Hozir qaysi sahifada:" : "Где сейчас на сайте:"}
+                            </span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400 text-xs block">
+                              {peer.activePage === 'schedule'
+                                ? 'Расписание (Сетка)'
+                                : peer.activePage === 'teachers'
+                                ? 'Учителя (Нагрузка)'
+                                : peer.activePage === 'classes'
+                                ? 'Классы (Планы)'
+                                : peer.activePage === 'subjects'
+                                ? 'Предметы'
+                                : peer.activePage === 'rooms'
+                                ? 'Кабинеты'
+                                : 'Главная страница'}
+                            </span>
+                          </div>
+
+                          <div className="p-2 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              {isUz ? "So'nggi harakat:" : "Последнее действие:"}
+                            </span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate" title={peer.lastAction}>
+                              {peer.lastAction || 'Просмотр сетки'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Manual Editor Name override */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 uppercase text-[10px] font-bold block">
+                        {isUz ? "Tuzuvchi ismi (eslatma):" : "Имя составителя (подпись в отчёте):"}
                       </span>
-                      {!isEditingName && (
-                        <button
-                          onClick={() => setIsEditingName(true)}
-                          className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                        >
-                          {isUz ? "O'zgartirish" : "Изменить"}
-                        </button>
-                      )}
+                      <p className="font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">
+                        {session.editorName}
+                      </p>
                     </div>
 
-                    {isEditingName ? (
-                      <div className="flex items-center gap-2">
+                    {!isEditingName ? (
+                      <button
+                        onClick={() => setIsEditingName(true)}
+                        className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                      >
+                        {isUz ? "O'zgartirish" : "Изменить имя"}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
                         <input
                           type="text"
                           value={editorNameInput}
                           onChange={(e) => setEditorNameInput(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
                         />
                         <Button size="sm" onClick={handleSaveEditorName} className="text-xs font-bold">
                           OK
                         </Button>
                       </div>
-                    ) : (
-                      <p className="text-base font-extrabold text-slate-900 dark:text-white">
-                        {session.editorName}
-                      </p>
                     )}
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-slate-400">{isUz ? "Qurilma / Tizim:" : "Устройство и ОС:"}</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-200">{session.device}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-slate-400">{isUz ? "Brauzer:" : "Браузер:"}</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-200">{session.browser}</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                      <span className="text-slate-400">{isUz ? "Oxirgi faollik:" : "Последняя активность:"}</span>
-                      <span className="font-bold text-emerald-600 font-mono">
-                        {new Date(session.lastActiveAt).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-slate-400">{isUz ? "Bajarilgan amallar:" : "Всего правок:"}</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{session.totalActionsCount}</span>
-                    </div>
                   </div>
                 </div>
               )}

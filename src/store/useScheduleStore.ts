@@ -10,6 +10,7 @@ import { calculateScheduleScore } from '../scheduler/scoring';
 import { validateSchoolData } from '../scheduler/validator';
 import { storageService } from '../services/storageService';
 import { auditService } from '../services/auditService';
+import { realtimeSyncService } from '../services/realtimeSyncService';
 import { useSchoolStore } from './useSchoolStore';
 
 interface ScheduleState {
@@ -197,6 +198,8 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
       conflicts: hardCheck.conflicts,
       snapshot: currentSchedule.entries,
     });
+
+    realtimeSyncService.broadcastAction('Правка расписания составителем', actionDesc, newEntries);
 
     storageService.saveSchedule(updatedSchedule);
     set({
@@ -558,6 +561,12 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
           conflicts: hardCheck.conflicts,
         });
 
+        realtimeSyncService.broadcastAction(
+          'Автогенерация расписания',
+          `Составлено расписание: ${newSchedule.entries.length} уроков`,
+          newSchedule.entries
+        );
+
         set({
           schedule: newSchedule,
           isGenerating: false,
@@ -829,6 +838,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
       description: 'Расписание полностью очищено составителем',
       snapshot: cur?.entries,
     });
+    realtimeSyncService.broadcastAction('Очистка расписания', 'Расписание полностью очищено', []);
     storageService.saveSchedule(null);
     set({ schedule: null, undoStack: [], redoStack: [] });
   },
