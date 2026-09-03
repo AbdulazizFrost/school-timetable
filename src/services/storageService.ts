@@ -25,69 +25,139 @@ const STORAGE_KEYS = {
 
 export const storageService = {
   saveLanguage: (lang: 'ru' | 'uz') => {
-    localStorage.setItem(STORAGE_KEYS.LANG, lang);
+    try {
+      localStorage.setItem(STORAGE_KEYS.LANG, lang);
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadLanguage: (): 'ru' | 'uz' => {
-    return (localStorage.getItem(STORAGE_KEYS.LANG) as any) || 'ru';
+    try {
+      return (localStorage.getItem(STORAGE_KEYS.LANG) as any) || 'ru';
+    } catch (e) {
+      return 'ru';
+    }
   },
 
   saveSettings: (settings: ScheduleSettings) => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    try {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadSettings: (): ScheduleSettings | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse settings from storage:', e);
+      return null;
+    }
   },
 
   saveTeachers: (teachers: Teacher[]) => {
-    localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(teachers));
+    try {
+      localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(teachers));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadTeachers: (): Teacher[] | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.TEACHERS);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.TEACHERS);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse teachers from storage:', e);
+      return null;
+    }
   },
 
   saveClasses: (classes: SchoolClass[]) => {
-    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+    try {
+      localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadClasses: (): SchoolClass[] | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.CLASSES);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CLASSES);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse classes from storage:', e);
+      return null;
+    }
   },
 
   saveSubjects: (subjects: Subject[]) => {
-    localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    try {
+      localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadSubjects: (): Subject[] | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.SUBJECTS);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SUBJECTS);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse subjects from storage:', e);
+      return null;
+    }
   },
 
   saveRooms: (rooms: Classroom[]) => {
-    localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    try {
+      localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadRooms: (): Classroom[] | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.ROOMS);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.ROOMS);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse rooms from storage:', e);
+      return null;
+    }
   },
 
   saveSchedule: (schedule: Schedule | null) => {
-    if (!schedule) {
-      localStorage.removeItem(STORAGE_KEYS.SCHEDULE);
-    } else {
-      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
+    try {
+      if (!schedule) {
+        localStorage.removeItem(STORAGE_KEYS.SCHEDULE);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
+      }
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
     }
   },
   loadSchedule: (): Schedule | null => {
-    const data = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to parse schedule from storage:', e);
+      return null;
+    }
   },
 
   saveTheme: (theme: 'light' | 'dark' | 'system') => {
-    localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    try {
+      localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   },
   loadTheme: (): 'light' | 'dark' | 'system' => {
-    return (localStorage.getItem(STORAGE_KEYS.THEME) as any) || 'light';
+    try {
+      return (localStorage.getItem(STORAGE_KEYS.THEME) as any) || 'light';
+    } catch (e) {
+      return 'light';
+    }
   },
 
   exportProjectJSON: (
