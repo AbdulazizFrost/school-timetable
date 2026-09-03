@@ -9,6 +9,7 @@ import { solveCSP } from '../scheduler/schedulerEngine';
 import { calculateScheduleScore } from '../scheduler/scoring';
 import { validateSchoolData } from '../scheduler/validator';
 import { storageService } from '../services/storageService';
+import { auditService } from '../services/auditService';
 import { useSchoolStore } from './useSchoolStore';
 
 interface ScheduleState {
@@ -181,6 +182,21 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
       conflicts: hardCheck.conflicts,
       updatedAt: new Date().toISOString(),
     };
+
+    const actionDesc =
+      newEntries.length > currentSchedule.entries.length
+        ? `Добавлен урок в сетку (всего уроков: ${newEntries.length})`
+        : newEntries.length < currentSchedule.entries.length
+        ? `Удалён урок из сетки (всего уроков: ${newEntries.length})`
+        : `Изменено положение уроков (перемещение/обмен местами)`;
+
+    auditService.logAction({
+      actionType: 'schedule_move',
+      title: 'Правка расписания составителем',
+      description: actionDesc,
+      conflicts: hardCheck.conflicts,
+      snapshot: currentSchedule.entries,
+    });
 
     storageService.saveSchedule(updatedSchedule);
     set({
@@ -534,6 +550,14 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
         };
 
         storageService.saveSchedule(newSchedule);
+
+        auditService.logAction({
+          actionType: 'schedule_generate',
+          title: 'Автогенерация расписания',
+          description: `Составлено расписание: ${newSchedule.entries.length} уроков, ${hardCheck.conflicts.length} конфликтов. Оценка качества: ${finalScore.totalScore}/100`,
+          conflicts: hardCheck.conflicts,
+        });
+
         set({
           schedule: newSchedule,
           isGenerating: false,
@@ -594,6 +618,11 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
       );
 
       if (optResult.improved) {
+        auditService.logAction({
+          actionType: 'schedule_optimize',
+          title: 'Оптимизация окон',
+          description: `Оптимизированы разрывы и окна у учителей (устранено окон: ${optResult.gapsEliminated}). Оценка: ${optResult.finalScore}/100`,
+        });
         get().pushHistory(optResult.entries);
         try {
           confetti({
@@ -793,6 +822,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   },
 
   clearSchedule: () => {
+    const cur = get().schedule;
+    auditService.logAction({
+      actionType: 'schedule_clear',
+      title: 'Очистка расписания',
+      description: 'Расписание полностью очищено составителем',
+      snapshot: cur?.entries,
+    });
     storageService.saveSchedule(null);
     set({ schedule: null, undoStack: [], redoStack: [] });
   },

@@ -10,6 +10,7 @@ import {
 } from '../data/demoData';
 import { validateSchoolData } from '../scheduler/validator';
 import { ProjectBackupData, storageService } from '../services/storageService';
+import { auditService } from '../services/auditService';
 import { Language, getTranslation, translations } from '../i18n/translations';
 
 interface SchoolState {
@@ -193,10 +194,16 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
 
     storageService.saveTeachers(updatedTeachers);
     const validation = validateSchoolData(updatedTeachers, updatedClasses, get().subjects, get().rooms, get().settings);
+    auditService.logAction({
+      actionType: 'teacher_edit',
+      title: 'Добавлен преподаватель',
+      description: `Добавлен учитель ${newTeacher.fullName} (${newTeacher.subjectIds.length} предметов)`,
+    });
     set({ teachers: updatedTeachers, classes: updatedClasses, validation });
   },
 
   updateTeacher: (id, teacherData) => {
+    const prevTeacher = get().teachers.find((t) => t.id === id);
     const updatedTeachers = get().teachers.map((t) => (t.id === id ? { ...t, ...teacherData } : t));
     
     // Sync classes curriculum if classAllocations are provided
@@ -208,10 +215,16 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
 
     storageService.saveTeachers(updatedTeachers);
     const validation = validateSchoolData(updatedTeachers, updatedClasses, get().subjects, get().rooms, get().settings);
+    auditService.logAction({
+      actionType: 'teacher_edit',
+      title: 'Изменение данных учителя',
+      description: `Изменены данные преподавателя ${teacherData.fullName || prevTeacher?.fullName || id}`,
+    });
     set({ teachers: updatedTeachers, classes: updatedClasses, validation });
   },
 
   deleteTeacher: (id) => {
+    const prevTeacher = get().teachers.find((t) => t.id === id);
     const updatedTeachers = get().teachers.filter((t) => t.id !== id);
     // Unassign this teacher from classes curriculum without deleting the subject row
     const updatedClasses = get().classes.map((cls) => ({
@@ -221,6 +234,11 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     storageService.saveTeachers(updatedTeachers);
     storageService.saveClasses(updatedClasses);
     const validation = validateSchoolData(updatedTeachers, updatedClasses, get().subjects, get().rooms, get().settings);
+    auditService.logAction({
+      actionType: 'teacher_edit',
+      title: 'Удалён преподаватель',
+      description: `Удалён учитель ${prevTeacher?.fullName || id} из штата школы`,
+    });
     set({ teachers: updatedTeachers, classes: updatedClasses, validation });
   },
 
@@ -242,6 +260,11 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const updated = [...get().classes, newClass];
     storageService.saveClasses(updated);
     const validation = validateSchoolData(get().teachers, updated, get().subjects, get().rooms, get().settings);
+    auditService.logAction({
+      actionType: 'class_edit',
+      title: 'Добавлен новый класс',
+      description: `Создан класс ${newClass.name} (${newClass.shift === 2 ? '2-я смена' : '1-я смена'})`,
+    });
     set({ classes: updated, validation });
   },
 
@@ -249,13 +272,25 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const updated = get().classes.map((c) => (c.id === id ? { ...c, ...classData } : c));
     storageService.saveClasses(updated);
     const validation = validateSchoolData(get().teachers, updated, get().subjects, get().rooms, get().settings);
+    const hasSplit = classData.curriculum?.some((r) => r.isSplit);
+    auditService.logAction({
+      actionType: hasSplit ? 'curriculum_split' : 'class_edit',
+      title: hasSplit ? 'Деление на подгруппы' : 'Изменение параметров класса',
+      description: `Обновлён учебный план класса ${classData.name || id}`,
+    });
     set({ classes: updated, validation });
   },
 
   deleteClass: (id) => {
+    const prevClass = get().classes.find((c) => c.id === id);
     const updated = get().classes.filter((c) => c.id !== id);
     storageService.saveClasses(updated);
     const validation = validateSchoolData(get().teachers, updated, get().subjects, get().rooms, get().settings);
+    auditService.logAction({
+      actionType: 'class_edit',
+      title: 'Удалён класс',
+      description: `Удалён класс ${prevClass?.name || id}`,
+    });
     set({ classes: updated, validation });
   },
 

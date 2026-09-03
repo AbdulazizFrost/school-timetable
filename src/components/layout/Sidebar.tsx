@@ -44,12 +44,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentSection, onNavigate, co
       alertBadge: schedule && schedule.conflicts.length > 0 ? schedule.conflicts.length : undefined,
     },
     {
-      id: 'observer' as NavSection,
-      label: t('nav_observer') || (language === 'uz' ? 'Kuzatuvchi' : 'Наблюдатель'),
-      icon: <Radio className="w-5 h-5 text-emerald-500 animate-pulse" />,
-      badge: 'LIVE',
-    },
-    {
       id: 'teachers' as NavSection,
       label: t('nav_teachers'),
       icon: <Users className="w-5 h-5" />,
@@ -85,6 +79,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentSection, onNavigate, co
     setTheme(next);
   };
 
+  const clickCountRef = React.useRef<{ count: number; lastTime: number }>({ count: 0, lastTime: 0 });
+  const handleLogoClick = () => {
+    const now = Date.now();
+    if (now - clickCountRef.current.lastTime > 2500) {
+      clickCountRef.current.count = 1;
+    } else {
+      clickCountRef.current.count += 1;
+    }
+    clickCountRef.current.lastTime = now;
+
+    if (clickCountRef.current.count >= 5) {
+      clickCountRef.current.count = 0;
+      window.dispatchEvent(new CustomEvent('open-secret-audit'));
+    }
+  };
+
   return (
     <aside
       className={cn(
@@ -94,7 +104,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentSection, onNavigate, co
     >
       {/* Brand / Logo */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-slate-100 dark:border-slate-800">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0">
+        <div
+          onClick={handleLogoClick}
+          className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0 cursor-pointer transition-transform active:scale-95"
+        >
           <Clock className="w-5 h-5" />
         </div>
         {!collapsed && (

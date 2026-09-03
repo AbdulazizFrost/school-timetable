@@ -42,10 +42,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenBackup, onOpenSettings }) 
     setLanguage(language === 'ru' ? 'uz' : 'ru');
   };
 
+  const clickCountRef = React.useRef<{ count: number; lastTime: number }>({ count: 0, lastTime: 0 });
+  const handleTitleClick = () => {
+    const now = Date.now();
+    if (now - clickCountRef.current.lastTime > 2500) {
+      clickCountRef.current.count = 1;
+    } else {
+      clickCountRef.current.count += 1;
+    }
+    clickCountRef.current.lastTime = now;
+
+    if (clickCountRef.current.count >= 5) {
+      clickCountRef.current.count = 0;
+      window.dispatchEvent(new CustomEvent('open-secret-audit'));
+    }
+  };
+
   return (
     <header className="h-[calc(3.5rem+env(safe-area-inset-top))] sm:h-16 pt-[env(safe-area-inset-top)] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between z-20 shrink-0 no-print">
-      {/* School Name & Status Indicator */}
-      <div className="flex items-center gap-2 min-w-0 pr-2">
+      {/* School Name & Status Indicator (Stealth trigger: 5 clicks opens Secret Auditor) */}
+      <div onClick={handleTitleClick} className="flex items-center gap-2 min-w-0 pr-2 cursor-pointer select-none active:opacity-90">
         <div className="min-w-0">
           <h2 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-md">
             {settings.schoolName || (language === 'uz' ? "1-sonli maktab" : "Школа № 1")}

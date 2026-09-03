@@ -65,26 +65,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onNavigate }) => {
           </Button>
 
           {schedule && (
-            <>
-              <Button
-                size="md"
-                variant="outline"
-                onClick={() => onNavigate('observer')}
-                className="w-full sm:w-auto bg-emerald-500/25 hover:bg-emerald-500/35 border-emerald-300/40 text-white font-bold text-xs sm:text-sm backdrop-blur-md cursor-pointer flex items-center gap-1.5"
-              >
-                <Radio className="w-4 h-4 text-emerald-300 animate-pulse" />
-                <span>{isUz ? "Jonli kuzatuv" : "Наблюдатель (LIVE)"}</span>
-              </Button>
-              <Button
-                size="md"
-                variant="outline"
-                onClick={() => onNavigate('schedule')}
-                className="w-full sm:w-auto bg-white/15 hover:bg-white/25 border-white/30 text-white font-semibold text-xs sm:text-sm backdrop-blur-md cursor-pointer"
-              >
-                <Calendar className="w-4 h-4 mr-1.5" />
-                <span>{isUz ? "Jadvalni ochish" : "Открыть сетку"}</span>
-              </Button>
-            </>
+            <Button
+              size="md"
+              variant="outline"
+              onClick={() => onNavigate('schedule')}
+              className="w-full sm:w-auto bg-white/15 hover:bg-white/25 border-white/30 text-white font-semibold text-xs sm:text-sm backdrop-blur-md cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 mr-1.5" />
+              <span>{isUz ? "Jadvalni ochish" : "Открыть сетку"}</span>
+            </Button>
           )}
         </div>
       </div>
