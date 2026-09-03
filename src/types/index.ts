@@ -87,15 +87,21 @@ export interface Subject {
   canBeFirstPeriod: boolean;
 }
 
+export type SplitGroupType = 'boys_girls' | 'subgroups';
+
 export interface CurriculumRequirement {
   id: string;
   subjectId: string;
-  teacherId?: string; // specific teacher assigned or empty to auto-assign
+  teacherId?: string; // specific teacher assigned or empty to auto-assign (Group 1 / Boys)
   lessonsPerWeek: number;
   preferredDays?: number[];
   preferredPeriods?: number[];
   allowDoubleLesson?: boolean;
   customRoomId?: string;
+  isSplit?: boolean; // Whether the class is split into 2 parallel groups (e.g. Boys / Girls or Group 1 / Group 2)
+  splitType?: SplitGroupType; // 'boys_girls' or 'subgroups'
+  secondTeacherId?: string; // Teacher for Group 2 / Girls
+  secondCustomRoomId?: string; // Optional custom room for Group 2
 }
 
 export interface SchoolClass {

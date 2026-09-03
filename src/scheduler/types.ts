@@ -1,4 +1,5 @@
 import { Classroom, SchoolClass, Subject, Teacher } from '../types';
+import { ScheduleEntry } from '../types/schedule';
 
 export interface LessonVariable {
   id: string; // unique lesson requirement instance, e.g. "cls_5a_sub_math_0"
@@ -15,12 +16,17 @@ export interface LessonVariable {
   preferredDays?: number[];
   preferredPeriods?: number[];
   isPinned?: boolean;
+  isSplit?: boolean;
+  splitType?: 'boys_girls' | 'subgroups';
+  secondTeacherId?: string;
+  secondCustomRoomId?: string;
 }
 
 export interface SlotValue {
   day: number;
   period: number;
   roomId: string;
+  secondRoomId?: string;
 }
 
 export interface CSPProblem {
@@ -44,16 +50,7 @@ export interface SolverOptions {
 
 export interface SolverResult {
   success: boolean;
-  scheduleEntries: Array<{
-    id: string;
-    classId: string;
-    subjectId: string;
-    teacherId: string;
-    classroomId: string;
-    day: number;
-    period: number;
-    isLocked?: boolean;
-  }>;
+  scheduleEntries: ScheduleEntry[];
   nodesExplored: number;
   elapsedMs: number;
   score?: number;

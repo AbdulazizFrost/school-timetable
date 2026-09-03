@@ -1,5 +1,7 @@
 import { ScheduleConflict } from './constraints';
 
+export type SubgroupIndicator = 'all' | 'boys' | 'girls' | 'group1' | 'group2';
+
 export interface ScheduleEntry {
   id: string;
   classId: string;
@@ -10,6 +12,8 @@ export interface ScheduleEntry {
   period: number; // 1..8
   isLocked?: boolean; // pinned by user
   isManual?: boolean;
+  subgroup?: SubgroupIndicator; // 'boys', 'girls', 'group1', 'group2', or undefined / 'all'
+  splitGroupId?: string; // Links paired split entries occurring simultaneously
 }
 
 export interface ScheduleScoreBreakdown {

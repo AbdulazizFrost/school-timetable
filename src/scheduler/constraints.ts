@@ -207,20 +207,30 @@ export const checkHardConstraints = (
   // Check Class Clashes
   classSlotMap.forEach((entryList) => {
     if (entryList.length > 1) {
-      const first = entryList[0];
-      const cls = classMap.get(first.classId);
-      const subNames = entryList.map((e) => subjectMap.get(e.subjectId)?.name || 'Урок').join(' и ');
-      conflicts.push({
-        id: `conf_cls_clash_${first.classId}_${first.day}_${first.period}`,
-        type: 'class_clash',
-        severity: 'FATAL',
-        day: first.day,
-        period: first.period,
-        message: `Конфликт класса: у ${cls?.name || 'класса'} одновременно назначено несколько предметов: ${subNames}.`,
-        affectedEntries: entryList.map((e) => e.id),
-        affectedEntityIds: { classIds: [first.classId] },
-        suggestion: 'Перенесите один из предметов на другой свободный урок.',
-      });
+      // Check if this is a legitimate parallel split group lesson (e.g. 1 boys and 1 girls, or 1 group1 and 1 group2)
+      const isComplementarySplit =
+        entryList.length === 2 &&
+        ((entryList[0].subgroup === 'boys' && entryList[1].subgroup === 'girls') ||
+          (entryList[0].subgroup === 'girls' && entryList[1].subgroup === 'boys') ||
+          (entryList[0].subgroup === 'group1' && entryList[1].subgroup === 'group2') ||
+          (entryList[0].subgroup === 'group2' && entryList[1].subgroup === 'group1'));
+
+      if (!isComplementarySplit) {
+        const first = entryList[0];
+        const cls = classMap.get(first.classId);
+        const subNames = entryList.map((e) => subjectMap.get(e.subjectId)?.name || 'Урок').join(' и ');
+        conflicts.push({
+          id: `conf_cls_clash_${first.classId}_${first.day}_${first.period}`,
+          type: 'class_clash',
+          severity: 'FATAL',
+          day: first.day,
+          period: first.period,
+          message: `Конфликт класса: у ${cls?.name || 'класса'} одновременно назначено несколько предметов: ${subNames}.`,
+          affectedEntries: entryList.map((e) => e.id),
+          affectedEntityIds: { classIds: [first.classId] },
+          suggestion: 'Перенесите один из предметов на другой свободный урок.',
+        });
+      }
     }
   });
 
@@ -249,18 +259,30 @@ export const checkHardConstraints = (
     if (entryList.length > 1) {
       const first = entryList[0];
       const rm = roomMap.get(first.classroomId);
-      const classNames = entryList.map((e) => classMap.get(e.classId)?.name || 'Класс').join(' и ');
-      conflicts.push({
-        id: `conf_room_clash_${first.classroomId}_${first.day}_${first.period}`,
-        type: 'room_clash',
-        severity: 'FATAL',
-        day: first.day,
-        period: first.period,
-        message: `Конфликт кабинета: «${rm?.name || 'Кабинет'}» занят одновременно классами: ${classNames}.`,
-        affectedEntries: entryList.map((e) => e.id),
-        affectedEntityIds: { roomIds: [first.classroomId], classIds: entryList.map((e) => e.classId) },
-        suggestion: 'Назначьте одному из классов другой свободный кабинет.',
-      });
+
+      // Gyms can accommodate both subgroups of the same class (Boys and Girls PE)
+      const isSameClassSplitGym =
+        rm?.type === 'gym' &&
+        entryList.length === 2 &&
+        entryList[0].classId === entryList[1].classId &&
+        entryList[0].subgroup &&
+        entryList[1].subgroup &&
+        entryList[0].subgroup !== entryList[1].subgroup;
+
+      if (!isSameClassSplitGym) {
+        const classNames = entryList.map((e) => classMap.get(e.classId)?.name || 'Класс').join(' и ');
+        conflicts.push({
+          id: `conf_room_clash_${first.classroomId}_${first.day}_${first.period}`,
+          type: 'room_clash',
+          severity: 'FATAL',
+          day: first.day,
+          period: first.period,
+          message: `Конфликт кабинета: «${rm?.name || 'Кабинет'}» занят одновременно классами: ${classNames}.`,
+          affectedEntries: entryList.map((e) => e.id),
+          affectedEntityIds: { roomIds: [first.classroomId], classIds: entryList.map((e) => e.classId) },
+          suggestion: 'Назначьте одному из классов другой свободный кабинет.',
+        });
+      }
     }
   });
 
@@ -325,20 +347,31 @@ export const validateNoRepeatSubjectInSameDay = (
 
   classDaySubjectMap.forEach((entryList) => {
     if (entryList.length > 1) {
-      const first = entryList[0];
-      const cls = classMap.get(first.classId);
-      const sub = subjectMap.get(first.subjectId);
-      conflicts.push({
-        id: `conf_dup_sub_${first.classId}_${first.day}_${first.subjectId}`,
-        type: 'class_clash',
-        severity: 'ERROR',
-        day: first.day,
-        period: first.period,
-        message: `В классе ${cls?.name || 'Класс'} в ${first.day}-й день недели повторяется предмет «${sub?.name || 'Предмет'}» (${entryList.length} раза). Повторение одного предмета в один день запрещено!`,
-        affectedEntries: entryList.map((e) => e.id),
-        affectedEntityIds: { classIds: [first.classId], subjectIds: [first.subjectId] },
-        suggestion: `Перенесите один из уроков предмета «${sub?.name || 'Предмет'}» на другой день.`,
-      });
+      // If entries are in the same period and are complementary split subgroups (Boys & Girls), they are halves of the same lesson!
+      const uniquePeriods = new Set(entryList.map((e) => e.period));
+      const isSplitGroupAtSamePeriod =
+        uniquePeriods.size === 1 &&
+        entryList.length === 2 &&
+        entryList[0].subgroup &&
+        entryList[1].subgroup &&
+        entryList[0].subgroup !== entryList[1].subgroup;
+
+      if (!isSplitGroupAtSamePeriod) {
+        const first = entryList[0];
+        const cls = classMap.get(first.classId);
+        const sub = subjectMap.get(first.subjectId);
+        conflicts.push({
+          id: `conf_dup_sub_${first.classId}_${first.day}_${first.subjectId}`,
+          type: 'class_clash',
+          severity: 'ERROR',
+          day: first.day,
+          period: first.period,
+          message: `В классе ${cls?.name || 'Класс'} в ${first.day}-й день недели повторяется предмет «${sub?.name || 'Предмет'}» (${entryList.length} раза). Повторение одного предмета в один день запрещено!`,
+          affectedEntries: entryList.map((e) => e.id),
+          affectedEntityIds: { classIds: [first.classId], subjectIds: [first.subjectId] },
+          suggestion: `Перенесите один из уроков предмета «${sub?.name || 'Предмет'}» на другой день.`,
+        });
+      }
     }
   });
 
@@ -523,6 +556,17 @@ export const preflightValidate = (
           `Ошибка в классе «${cls.name}»: для предмета «${sub?.name || req.subjectId}» не назначен или не найден преподаватель.`
         );
       }
+      if (req.isSplit) {
+        if (!req.secondTeacherId || !teacherMap.has(req.secondTeacherId)) {
+          errors.push(
+            `Ошибка в классе «${cls.name}»: для деления предмета «${sub?.name || req.subjectId}» на подгруппы (Мальчики/Девочки) не назначен 2-й преподаватель.`
+          );
+        } else if (req.teacherId === req.secondTeacherId) {
+          warnings.push(
+            `Предупреждение в классе «${cls.name}»: для обеих подгрупп предмета «${sub?.name || req.subjectId}» назначен один и тот же учитель. Учитель не сможет вести обе группы одновременно!`
+          );
+        }
+      }
       if (!req.lessonsPerWeek || req.lessonsPerWeek <= 0) {
         errors.push(
           `Ошибка в классе «${cls.name}»: количество часов для «${sub?.name || req.subjectId}» должно быть больше 0.`
@@ -543,6 +587,12 @@ export const preflightValidate = (
         teacherLoadMap.set(
           req.teacherId,
           (teacherLoadMap.get(req.teacherId) || 0) + (Number(req.lessonsPerWeek) || 0)
+        );
+      }
+      if (req.isSplit && req.secondTeacherId) {
+        teacherLoadMap.set(
+          req.secondTeacherId,
+          (teacherLoadMap.get(req.secondTeacherId) || 0) + (Number(req.lessonsPerWeek) || 0)
         );
       }
     });
@@ -669,11 +719,20 @@ export const validateSchedule = (
   let classConflicts = 0;
   classSlotMap.forEach((list, key) => {
     if (list.length > 1) {
-      classConflicts++;
-      const cls = classMap.get(list[0].classId);
-      details.push(
-        `Конфликт класса: у ${cls?.name || 'класса'} одновременно ${list.length} уроков (День ${list[0].day}, Урок ${list[0].period}).`
-      );
+      const isComplementarySplit =
+        list.length === 2 &&
+        ((list[0].subgroup === 'boys' && list[1].subgroup === 'girls') ||
+          (list[0].subgroup === 'girls' && list[1].subgroup === 'boys') ||
+          (list[0].subgroup === 'group1' && list[1].subgroup === 'group2') ||
+          (list[0].subgroup === 'group2' && list[1].subgroup === 'group1'));
+
+      if (!isComplementarySplit) {
+        classConflicts++;
+        const cls = classMap.get(list[0].classId);
+        details.push(
+          `Конфликт класса: у ${cls?.name || 'класса'} одновременно ${list.length} уроков (День ${list[0].day}, Урок ${list[0].period}).`
+        );
+      }
     }
   });
 
@@ -691,23 +750,43 @@ export const validateSchedule = (
   let roomConflicts = 0;
   roomSlotMap.forEach((list, key) => {
     if (list.length > 1) {
-      roomConflicts++;
       const rm = roomMap.get(list[0].classroomId);
-      details.push(
-        `Конфликт кабинета: «${rm?.name || 'Кабинет'}» занят одновременно ${list.length} классами (День ${list[0].day}, Урок ${list[0].period}).`
-      );
+      const isSameClassGymSplit =
+        rm?.type === 'gym' &&
+        list.length === 2 &&
+        list[0].classId === list[1].classId &&
+        list[0].subgroup &&
+        list[1].subgroup &&
+        list[0].subgroup !== list[1].subgroup;
+
+      if (!isSameClassGymSplit) {
+        roomConflicts++;
+        details.push(
+          `Конфликт кабинета: «${rm?.name || 'Кабинет'}» занят одновременно ${list.length} классами (День ${list[0].day}, Урок ${list[0].period}).`
+        );
+      }
     }
   });
 
   let sameDayDuplicateErrors = 0;
   classDaySubMap.forEach((list) => {
     if (list.length > 1) {
-      sameDayDuplicateErrors++;
-      const cls = classMap.get(list[0].classId);
-      const sub = subjectMap.get(list[0].subjectId);
-      details.push(
-        `Повтор предмета: класс «${cls?.name || ''}» имеет ${list.length} урока предмета «${sub?.name || ''}» в ${list[0].day}-й день недели.`
-      );
+      const uniquePeriods = new Set(list.map((e) => e.period));
+      const isSplitAtSamePeriod =
+        uniquePeriods.size === 1 &&
+        list.length === 2 &&
+        list[0].subgroup &&
+        list[1].subgroup &&
+        list[0].subgroup !== list[1].subgroup;
+
+      if (!isSplitAtSamePeriod) {
+        sameDayDuplicateErrors++;
+        const cls = classMap.get(list[0].classId);
+        const sub = subjectMap.get(list[0].subjectId);
+        details.push(
+          `Повтор предмета: класс «${cls?.name || ''}» имеет ${list.length} урока предмета «${sub?.name || ''}» в ${list[0].day}-й день недели.`
+        );
+      }
     }
   });
 
@@ -744,10 +823,15 @@ export const validateSchedule = (
 
   classes.forEach((cls) => {
     const actualSubjectCounts = new Map<string, number>();
+    const countedPeriods = new Set<string>();
     entries
       .filter((e) => e.classId === cls.id)
       .forEach((e) => {
-        actualSubjectCounts.set(e.subjectId, (actualSubjectCounts.get(e.subjectId) || 0) + 1);
+        const slotKey = `${e.day}_${e.period}_${e.subjectId}`;
+        if (!countedPeriods.has(slotKey)) {
+          countedPeriods.add(slotKey);
+          actualSubjectCounts.set(e.subjectId, (actualSubjectCounts.get(e.subjectId) || 0) + 1);
+        }
       });
 
     const expectedSubjectCounts = new Map<string, number>();

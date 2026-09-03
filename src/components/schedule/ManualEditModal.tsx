@@ -18,6 +18,7 @@ export const ManualEditModal: React.FC = () => {
   const [classroomId, setClassroomId] = useState('');
   const [day, setDay] = useState<number>(1);
   const [period, setPeriod] = useState<number>(1);
+  const [subgroup, setSubgroup] = useState<string>('all');
 
   useEffect(() => {
     if (editingEntry) {
@@ -27,10 +28,12 @@ export const ManualEditModal: React.FC = () => {
       setClassroomId(editingEntry.classroomId);
       setDay(editingEntry.day);
       setPeriod(editingEntry.period);
+      setSubgroup(editingEntry.subgroup || 'all');
     } else if (newEntrySlot) {
       setClassId(newEntrySlot.classId || (classes[0]?.id ?? ''));
       setDay(newEntrySlot.day || 1);
       setPeriod(newEntrySlot.period || 1);
+      setSubgroup('all');
       if (subjects.length > 0) setSubjectId(subjects[0].id);
       if (teachers.length > 0) setTeacherId(teachers[0].id);
       if (rooms.length > 0) setClassroomId(rooms[0].id);
@@ -41,6 +44,7 @@ export const ManualEditModal: React.FC = () => {
       if (rooms.length > 0) setClassroomId(rooms[0].id);
       setDay(1);
       setPeriod(1);
+      setSubgroup('all');
     }
   }, [editingEntry, newEntrySlot, editModalOpen, classes, subjects, teachers, rooms]);
 
@@ -87,6 +91,8 @@ export const ManualEditModal: React.FC = () => {
       classroomId: classroomId || rooms[0]?.id || '',
       day,
       period,
+      subgroup: subgroup === 'all' ? undefined : (subgroup as any),
+      splitGroupId: editingEntry?.splitGroupId,
     });
   };
 
@@ -215,6 +221,24 @@ export const ManualEditModal: React.FC = () => {
                 {r.name} (каб. {r.roomNumber}, {r.capacity} мест)
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Subgroup */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Подгруппа класса
+          </label>
+          <select
+            className="w-full min-h-[44px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-medium"
+            value={subgroup}
+            onChange={(e) => setSubgroup(e.target.value)}
+          >
+            <option value="all">Весь класс (без деления)</option>
+            <option value="boys">♂ Подгруппа: Мальчики (O‘g‘il bolalar)</option>
+            <option value="girls">♀ Подгруппа: Девочки (Qiz bolalar)</option>
+            <option value="group1">1-я группа (1-guruh)</option>
+            <option value="group2">2-я группа (2-guruh)</option>
           </select>
         </div>
 

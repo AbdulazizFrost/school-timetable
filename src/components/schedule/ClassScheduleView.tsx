@@ -127,10 +127,16 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
                             );
                           }
 
-                          const entry = classEntries.find((e) => e.day === day && e.period === period);
+                          const slotEntries = classEntries.filter((e) => e.day === day && e.period === period);
+                          const entry = slotEntries[0] || null;
+                          const secondEntry = slotEntries[1] || null;
+
                           const subject = entry ? subjectMap.get(entry.subjectId) : null;
+                          const secondSubject = secondEntry ? subjectMap.get(secondEntry.subjectId) : null;
                           const teacher = entry ? teacherMap.get(entry.teacherId) : null;
+                          const secondTeacher = secondEntry ? teacherMap.get(secondEntry.teacherId) : null;
                           const room = entry ? roomMap.get(entry.classroomId) : null;
+                          const secondRoom = secondEntry ? roomMap.get(secondEntry.classroomId) : null;
 
                           const conflict = schedule.conflicts.find(
                             (c) =>
@@ -143,19 +149,29 @@ export const ClassScheduleView: React.FC<ClassScheduleViewProps> = ({
                             <td key={day} className={`p-1 sm:p-1.5 align-top ${displayDays.length > 1 ? 'min-w-[120px] sm:min-w-[130px] max-w-[200px]' : 'w-full'}`}>
                               <ScheduleCell
                                 entry={entry}
+                                secondEntry={secondEntry}
                                 subject={subject}
+                                secondSubject={secondSubject}
                                 teacher={teacher}
+                                secondTeacher={secondTeacher}
                                 room={room}
+                                secondRoom={secondRoom}
                                 cls={cls}
                                 day={day}
                                 period={period}
                                 hasConflict={!!conflict}
                                 conflictMessage={conflict?.message}
-                                isDragging={draggedEntry?.id === entry?.id}
+                                isDragging={draggedEntry?.id === entry?.id || draggedEntry?.id === secondEntry?.id}
                                 onDragStart={handleDragStart}
                                 onDrop={(e, d, p) => handleDrop(e, cls.id, d, p)}
                                 onEdit={(ent) => setEditModalOpen(true, ent)}
-                                onDelete={deleteEntry}
+                                onDelete={(id) => {
+                                  deleteEntry(id);
+                                  if (secondEntry && entry && (id === entry.id || id === secondEntry.id)) {
+                                    const other = id === entry.id ? secondEntry : entry;
+                                    deleteEntry(other.id);
+                                  }
+                                }}
                                 onToggleLock={toggleEntryLock}
                                 onAddAtSlot={(d, p) => setEditModalOpen(true, null, { classId: cls.id, day: d, period: p })}
                               />

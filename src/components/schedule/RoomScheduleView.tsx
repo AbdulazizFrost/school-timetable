@@ -109,10 +109,15 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
                             );
                           }
 
-                          const entry = roomEntries.find((e) => e.day === day && e.period === period);
+                          const slotEntries = roomEntries.filter((e) => e.day === day && e.period === period);
+                          const entry = slotEntries[0] || null;
+                          const secondEntry = slotEntries[1] || null;
+
                           const subject = entry ? subjectMap.get(entry.subjectId) : null;
+                          const secondSubject = secondEntry ? subjectMap.get(secondEntry.subjectId) : null;
                           const cls = entry ? classMap.get(entry.classId) : null;
                           const teacher = entry ? teacherMap.get(entry.teacherId) : null;
+                          const secondTeacher = secondEntry ? teacherMap.get(secondEntry.teacherId) : null;
 
                           const conflict = schedule.conflicts.find(
                             (c) =>
@@ -125,9 +130,13 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
                             <td key={day} className={`p-1 sm:p-1.5 align-top ${displayDays.length > 1 ? 'min-w-[120px] sm:min-w-[130px] max-w-[200px]' : 'w-full'}`}>
                               <ScheduleCell
                                 entry={entry}
+                                secondEntry={secondEntry}
                                 subject={subject}
+                                secondSubject={secondSubject}
                                 teacher={teacher}
+                                secondTeacher={secondTeacher}
                                 room={room}
+                                secondRoom={room}
                                 cls={cls}
                                 day={day}
                                 period={period}
@@ -135,7 +144,13 @@ export const RoomScheduleView: React.FC<RoomScheduleViewProps> = ({
                                 hasConflict={!!conflict}
                                 conflictMessage={conflict?.message}
                                 onEdit={(ent) => setEditModalOpen(true, ent)}
-                                onDelete={deleteEntry}
+                                onDelete={(id) => {
+                                  deleteEntry(id);
+                                  if (secondEntry && entry && (id === entry.id || id === secondEntry.id)) {
+                                    const other = id === entry.id ? secondEntry : entry;
+                                    deleteEntry(other.id);
+                                  }
+                                }}
                                 onToggleLock={toggleEntryLock}
                                 onAddAtSlot={(d, p) =>
                                   setEditModalOpen(true, null, { day: d, period: p })

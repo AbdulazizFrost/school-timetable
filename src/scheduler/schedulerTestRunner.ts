@@ -214,11 +214,13 @@ export const runSchedulerTestSuite = (): { allPassed: boolean; results: TestResu
     const checkMap = new Map<string, number>();
     solveRes.scheduleEntries.forEach((entry) => {
       const key = `${entry.classId}_${entry.day}_${entry.subjectId}`;
-      const cnt = (checkMap.get(key) || 0) + 1;
-      if (cnt > 1) {
-        throw new Error(`Duplicate subject detected for class ${entry.classId} on day ${entry.day}: subject ${entry.subjectId} appears ${cnt} times!`);
+      const existingPeriod = checkMap.get(key);
+      if (existingPeriod !== undefined && existingPeriod !== entry.period) {
+        throw new Error(
+          `Duplicate subject detected for class ${entry.classId} on day ${entry.day}: subject ${entry.subjectId} appears at periods ${existingPeriod} and ${entry.period}!`
+        );
       }
-      checkMap.set(key, cnt);
+      checkMap.set(key, entry.period);
     });
   });
 
@@ -267,10 +269,11 @@ export const runSchedulerTestSuite = (): { allPassed: boolean; results: TestResu
       const classEntries = solveRes.scheduleEntries.filter(
         (e) => e.classId === entry.classId && e.day === entry.day && e.period === entry.period
       );
-      if (classEntries.length !== 1) {
-        throw new Error(`Class ${entry.classId} does not have exactly 1 lesson at day ${entry.day} period ${entry.period}`);
+      if (classEntries.length < 1) {
+        throw new Error(`Class ${entry.classId} does not have any lesson at day ${entry.day} period ${entry.period}`);
       }
-      if (classEntries[0].id !== entry.id || classEntries[0].teacherId !== entry.teacherId || classEntries[0].subjectId !== entry.subjectId) {
+      const matchingEntry = classEntries.find((c) => c.id === entry.id);
+      if (!matchingEntry || matchingEntry.teacherId !== entry.teacherId || matchingEntry.subjectId !== entry.subjectId) {
         throw new Error(`Mismatch between teacher entry and class entry for class ${entry.classId}`);
       }
     });
@@ -295,10 +298,10 @@ export const runSchedulerTestSuite = (): { allPassed: boolean; results: TestResu
           if (dayLessons[0].period !== 1) {
             throw new Error(`Class ${cls.name} on day ${day} does not start on Period 1! Starts on Period ${dayLessons[0].period}`);
           }
-          const periods = dayLessons.map((l) => l.period);
-          for (let p = 1; p <= dayLessons.length; p++) {
-            if (!periods.includes(p)) {
-              throw new Error(`Class ${cls.name} on day ${day} has a hole/gap at Period ${p}! Scheduled periods: ${periods.join(', ')}`);
+          const distinctPeriods = Array.from(new Set(dayLessons.map((l) => l.period))).sort((a, b) => a - b);
+          for (let p = 1; p <= distinctPeriods.length; p++) {
+            if (!distinctPeriods.includes(p)) {
+              throw new Error(`Class ${cls.name} on day ${day} has a hole/gap at Period ${p}! Scheduled periods: ${distinctPeriods.join(', ')}`);
             }
           }
         }
@@ -324,6 +327,70 @@ export const runSchedulerTestSuite = (): { allPassed: boolean; results: TestResu
     if (score.metrics.totalTeacherGaps > 30) {
       throw new Error(`Too many teacher windows detected across school: ${score.metrics.totalTeacherGaps} total gap hours!`);
     }
+  });
+
+  // Test 17: Class Split Groups (e.g. PE or Technology with Boys & Girls and 2 teachers simultaneously)
+  runTest('17. Hard Constraint: Class Split Groups (Boys & Girls with 2 Teachers simultaneously with 0 clashes)', () => {
+    const splitClass: SchoolClass = {
+      id: 'cls_split_test',
+      name: '7-A',
+      grade: 7,
+      letter: 'A',
+      studentCount: 8,
+      shift: 1,
+      curriculum: [
+        {
+          id: 'req_split_pe',
+          subjectId: 'jismoniy-tarbiya',
+          teacherId: 'tch_feruza',
+          isSplit: true,
+          splitType: 'boys_girls',
+          secondTeacherId: 'tch_marxabo',
+          lessonsPerWeek: 2,
+        },
+        {
+          id: 'req_math',
+          subjectId: 'matematika',
+          teacherId: 'tch_sayora',
+          lessonsPerWeek: 3,
+        },
+      ],
+    };
+
+    const solveRes = solveCSP(INITIAL_TEACHERS, [splitClass], INITIAL_SUBJECTS, INITIAL_ROOMS, INITIAL_SETTINGS, {
+      maxTimeMs: 5000,
+    });
+
+    if (!solveRes.success) {
+      throw new Error(`CSP Solver failed to schedule split class: ${solveRes.failureReasons?.join('; ')}`);
+    }
+
+    const check = checkHardConstraints(solveRes.scheduleEntries, INITIAL_TEACHERS, [splitClass], INITIAL_SUBJECTS, INITIAL_ROOMS, INITIAL_SETTINGS);
+    if (check.hasConflicts) {
+      throw new Error(`Split class produced conflicts: ${check.conflicts.map((c) => c.message).join('; ')}`);
+    }
+
+    const peEntries = solveRes.scheduleEntries.filter((e) => e.subjectId === 'jismoniy-tarbiya');
+    if (peEntries.length !== 4) {
+      throw new Error(`Expected 4 split PE entries (2 lessons * 2 groups), got ${peEntries.length}`);
+    }
+
+    const boysEntries = peEntries.filter((e) => e.subgroup === 'boys');
+    const girlsEntries = peEntries.filter((e) => e.subgroup === 'girls');
+
+    if (boysEntries.length !== 2 || girlsEntries.length !== 2) {
+      throw new Error(`Expected 2 boys entries and 2 girls entries, got ${boysEntries.length} boys and ${girlsEntries.length} girls`);
+    }
+
+    boysEntries.forEach((bEntry) => {
+      const gEntry = girlsEntries.find((g) => g.day === bEntry.day && g.period === bEntry.period);
+      if (!gEntry) {
+        throw new Error(`Boys lesson at Day ${bEntry.day}, Period ${bEntry.period} does NOT have simultaneous Girls lesson!`);
+      }
+      if (bEntry.teacherId === gEntry.teacherId) {
+        throw new Error(`Boys and Girls were assigned the same teacher: ${bEntry.teacherId}`);
+      }
+    });
   });
 
   const allPassed = results.every((r) => r.passed);

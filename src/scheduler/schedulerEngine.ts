@@ -49,6 +49,18 @@ export const buildCSPProblem = (
 
         if (!teacherId) return;
 
+        let secondTeacherId = req.secondTeacherId;
+        if (req.isSplit) {
+          if (!secondTeacherId || !teacherMap.has(secondTeacherId)) {
+            const eligible2 = teachers.filter((t) => t.subjectIds.includes(req.subjectId) && t.id !== teacherId);
+            if (eligible2.length > 0) {
+              secondTeacherId = eligible2[0].id;
+            } else {
+              secondTeacherId = teacherId;
+            }
+          }
+        }
+
         for (let i = 0; i < req.lessonsPerWeek; i++) {
           variables.push({
             id: `${cls.id}_${req.subjectId}_${teacherId}_${i}`,
@@ -64,6 +76,10 @@ export const buildCSPProblem = (
             instanceIndex: i,
             preferredDays: req.preferredDays,
             preferredPeriods: req.preferredPeriods || sub.preferredPeriods,
+            isSplit: req.isSplit,
+            splitType: req.splitType || 'boys_girls',
+            secondTeacherId: secondTeacherId,
+            secondCustomRoomId: req.secondCustomRoomId,
           });
         }
       });
@@ -122,6 +138,7 @@ const getVariableDomain = (
   allowEmergencySaturday = false
 ): SlotValue[] => {
   const teacher = problem.teachers.get(v.teacherId);
+  const secondTeacher = v.isSplit && v.secondTeacherId ? problem.teachers.get(v.secondTeacherId) : null;
   const cls = problem.classes.get(v.classId);
   let eligibleRooms: Classroom[] = [];
 
@@ -180,14 +197,42 @@ const getVariableDomain = (
       }
     }
 
+    // Availability of second teacher for split group
+    if (v.isSplit && secondTeacher?.availability && secondTeacher.availability[slotKey] === false) {
+      if (!(allowEmergencySaturday && slot.day === 6)) {
+        continue;
+      }
+    }
+
     for (const room of eligibleRooms) {
       if (room.availableSlots && room.availableSlots[slotKey] === false) {
         continue;
       }
+
+      let secondRoomId: string | undefined = undefined;
+      if (v.isSplit) {
+        if (v.secondCustomRoomId && problem.rooms.has(v.secondCustomRoomId)) {
+          secondRoomId = v.secondCustomRoomId;
+        } else if (v.requiredRoomType === 'gym' || room.type === 'gym') {
+          // Gym can accommodate both boys and girls simultaneously
+          secondRoomId = room.id;
+        } else {
+          // Look for a second eligible room different from room.id
+          const otherEligible = eligibleRooms.find((r) => r.id !== room.id);
+          if (otherEligible) {
+            secondRoomId = otherEligible.id;
+          } else {
+            const otherRoom = problem.allRooms.find((r) => r.id !== room.id);
+            secondRoomId = otherRoom ? otherRoom.id : room.id;
+          }
+        }
+      }
+
       domain.push({
         day: slot.day,
         period: slot.period,
         roomId: room.id,
+        secondRoomId,
       });
     }
   }
@@ -286,14 +331,21 @@ export const compactScheduleEntries = (
     allEntries: ScheduleEntry[]
   ): ScheduleEntry[] | null => {
     const classDayEntries = allEntries
-      .filter((e) => e.classId === classId && e.day === day)
-      .sort((a, b) => a.period - b.period);
+      .filter((e) => e.classId === classId && e.day === day);
 
-    const N = classDayEntries.length;
-    if (N === 0) return allEntries;
+    if (classDayEntries.length === 0) return allEntries;
 
-    const currentPeriods = classDayEntries.map((e) => e.period);
-    const isAlreadySequential = currentPeriods.every((p, idx) => p === idx + 1);
+    // Group entries that occur in the same period (e.g. split groups like boys & girls)
+    const periodMap = new Map<number, ScheduleEntry[]>();
+    classDayEntries.forEach((e) => {
+      if (!periodMap.has(e.period)) periodMap.set(e.period, []);
+      periodMap.get(e.period)!.push(e);
+    });
+
+    const distinctPeriods = Array.from(periodMap.keys()).sort((a, b) => a - b);
+    const N = distinctPeriods.length;
+
+    const isAlreadySequential = distinctPeriods.every((p, idx) => p === idx + 1);
     if (isAlreadySequential) return allEntries;
 
     const otherEntries = allEntries.filter(
@@ -304,43 +356,55 @@ export const compactScheduleEntries = (
 
     const result: ScheduleEntry[] = [];
     const usedPeriods = new Set<number>();
+    const lessonGroups = distinctPeriods.map((p) => periodMap.get(p)!);
 
     const match = (idx: number): boolean => {
-      if (idx === classDayEntries.length) return true;
-      const entry = classDayEntries[idx];
-      const teacher = teacherMap.get(entry.teacherId);
-      const isKelajak = entry.subjectId === 'kelajak-darsi' || entry.subjectId.toLowerCase().includes('kelajak');
+      if (idx === lessonGroups.length) return true;
+      const group = lessonGroups[idx];
+      const isKelajak = group.some(
+        (e) => e.subjectId === 'kelajak-darsi' || e.subjectId.toLowerCase().includes('kelajak')
+      );
 
       for (const p of targetPeriods) {
         if (usedPeriods.has(p)) continue;
         if (isKelajak && !(day === 1 && p === 1)) continue;
 
-        // Check teacher availability
-        if (teacher?.availability && teacher.availability[`${day}-${p}`] === false) {
-          continue;
-        }
-
-        // Check teacher clash with other classes
-        const tchClash = otherEntries.some(
-          (o) => o.teacherId === entry.teacherId && o.day === day && o.period === p
-        );
-        if (tchClash) continue;
-
-        // Check room clash
-        if (entry.classroomId) {
-          const rmClash = otherEntries.some(
-            (o) => o.classroomId === entry.classroomId && o.day === day && o.period === p
+        let groupValid = true;
+        for (const entry of group) {
+          const teacher = teacherMap.get(entry.teacherId);
+          if (teacher?.availability && teacher.availability[`${day}-${p}`] === false) {
+            groupValid = false;
+            break;
+          }
+          const tchClash = otherEntries.some(
+            (o) => o.teacherId === entry.teacherId && o.day === day && o.period === p
           );
-          if (rmClash) continue;
+          if (tchClash) {
+            groupValid = false;
+            break;
+          }
+          if (entry.classroomId) {
+            const rmClash = otherEntries.some(
+              (o) => o.classroomId === entry.classroomId && o.day === day && o.period === p
+            );
+            if (rmClash) {
+              groupValid = false;
+              break;
+            }
+          }
         }
+
+        if (!groupValid) continue;
 
         usedPeriods.add(p);
-        result.push({ ...entry, period: p });
+        group.forEach((ent) => result.push({ ...ent, period: p }));
 
         if (match(idx + 1)) return true;
 
         usedPeriods.delete(p);
-        result.pop();
+        for (let k = 0; k < group.length; k++) {
+          result.pop();
+        }
       }
       return false;
     };
@@ -379,6 +443,7 @@ export const compactScheduleEntries = (
               e.classId === cls.id &&
               e.day !== day &&
               !e.isLocked &&
+              !e.splitGroupId &&
               e.subjectId !== 'kelajak-darsi' &&
               !e.subjectId.toLowerCase().includes('kelajak')
           );
@@ -391,7 +456,7 @@ export const compactScheduleEntries = (
 
             // Check if swapping with a lesson in dayEntries creates duplicate subjects in either day
             for (const dayEntry of dayEntries) {
-              if (dayEntry.isLocked || dayEntry.subjectId === 'kelajak-darsi' || dayEntry.subjectId.toLowerCase().includes('kelajak')) {
+              if (dayEntry.isLocked || dayEntry.splitGroupId || dayEntry.subjectId === 'kelajak-darsi' || dayEntry.subjectId.toLowerCase().includes('kelajak')) {
                 continue;
               }
 
@@ -488,7 +553,7 @@ export const compactTeacherWindows = (
           .sort((a, b) => a.period - b.period);
 
         const K = dayLessons.length;
-        if (K <= 1) continue;
+        if (K <= 1 || dayLessons.some((e) => e.splitGroupId)) continue;
 
         const otherEntries = current.filter((e) => !(e.classId === cls.id && e.day === day));
 
@@ -571,7 +636,7 @@ export const compactTeacherWindows = (
             const e1 = dayEntries[i];
             const e2 = dayEntries[j];
 
-            if (e1.isLocked || e2.isLocked) continue;
+            if (e1.isLocked || e2.isLocked || e1.splitGroupId || e2.splitGroupId) continue;
             if (e1.subjectId === 'kelajak-darsi' || e2.subjectId === 'kelajak-darsi') continue;
             if (day === 1 && (e1.period === 1 || e2.period === 1)) continue;
 
@@ -787,6 +852,10 @@ export const solveCSP = (
         const teacher = problem.teachers.get(v.teacherId);
         const sub = problem.subjects.get(v.subjectId);
 
+        const isSplitVar = v.isSplit && v.secondTeacherId;
+        const secondTeacherIdx = isSplitVar ? teacherIndexMap.get(v.secondTeacherId!) : undefined;
+        const secondTeacher = isSplitVar && v.secondTeacherId ? problem.teachers.get(v.secondTeacherId) : undefined;
+
         const assignedCount = teacherTotalLessons.get(v.teacherId) || 0;
         const minDailyNeeded = Math.ceil(assignedCount / Math.max(1, settings.workingDays.length));
         const baseDailyMax = teacher?.maxLessonsPerDay || 5;
@@ -798,11 +867,25 @@ export const solveCSP = (
         for (const slot of domain) {
           const roomIdx = roomIndexMap.get(slot.roomId);
 
-          // Hard checks
+          // Hard checks: Class, Teacher 1, Room 1
           if (classOccupied[classIdx][slot.day][slot.period]) continue;
           if (teacherOccupied[teacherIdx][slot.day][slot.period]) continue;
           if (roomIdx !== undefined && roomOccupied[roomIdx][slot.day][slot.period]) continue;
           if (teacherDailyLessons[teacherIdx][slot.day] >= maxTeacherDaily) continue;
+
+          // Hard checks: Teacher 2 & Room 2 for split group
+          if (isSplitVar && secondTeacherIdx !== undefined) {
+            if (teacherOccupied[secondTeacherIdx][slot.day][slot.period]) continue;
+            const secondBaseDailyMax = secondTeacher?.maxLessonsPerDay || 5;
+            const maxSecondTeacherDaily = Math.max(secondBaseDailyMax, restart >= 2 ? 6 : 5);
+            if (teacherDailyLessons[secondTeacherIdx][slot.day] >= maxSecondTeacherDaily) continue;
+            if (slot.secondRoomId) {
+              const secondRoomIdx = roomIndexMap.get(slot.secondRoomId);
+              if (secondRoomIdx !== undefined && secondRoomIdx !== roomIdx && roomOccupied[secondRoomIdx][slot.day][slot.period]) {
+                continue;
+              }
+            }
+          }
 
           // Hard Rule: Strictly max 1 lesson of the same subject per class in a single day
           const subDayKey = `${v.classId}_${slot.day}_${v.subjectId}`;
@@ -848,18 +931,31 @@ export const solveCSP = (
 
       const classIdx = classIndexMap.get(bestVar.classId)!;
       const teacherIdx = teacherIndexMap.get(bestVar.teacherId)!;
+      const isSplitBest = bestVar.isSplit && bestVar.secondTeacherId;
+      const secondTchIdxBest = isSplitBest ? teacherIndexMap.get(bestVar.secondTeacherId!) : undefined;
 
       for (const candidate of bestCandidates) {
         const slot = candidate.slot;
         const roomIdx = roomIndexMap.get(slot.roomId);
+        const secondRmIdxBest = slot.secondRoomId ? roomIndexMap.get(slot.secondRoomId) : undefined;
         const subDayKey = `${bestVar.classId}_${slot.day}_${bestVar.subjectId}`;
 
-        // Forward assign
+        // Forward assign Teacher 1 & Room 1
         assignment.set(bestVar.id, slot);
         classOccupied[classIdx][slot.day][slot.period] = true;
         teacherOccupied[teacherIdx][slot.day][slot.period] = true;
         if (roomIdx !== undefined) roomOccupied[roomIdx][slot.day][slot.period] = true;
         teacherDailyLessons[teacherIdx][slot.day]++;
+
+        // Forward assign Teacher 2 & Room 2 for split group
+        if (isSplitBest && secondTchIdxBest !== undefined) {
+          teacherOccupied[secondTchIdxBest][slot.day][slot.period] = true;
+          teacherDailyLessons[secondTchIdxBest][slot.day]++;
+          if (secondRmIdxBest !== undefined && secondRmIdxBest !== roomIdx) {
+            roomOccupied[secondRmIdxBest][slot.day][slot.period] = true;
+          }
+        }
+
         classDaySubjectCount.set(subDayKey, (classDaySubjectCount.get(subDayKey) || 0) + 1);
 
         if (backtrack(assignedCountSoFar + 1)) {
@@ -872,6 +968,15 @@ export const solveCSP = (
         teacherOccupied[teacherIdx][slot.day][slot.period] = false;
         if (roomIdx !== undefined) roomOccupied[roomIdx][slot.day][slot.period] = false;
         teacherDailyLessons[teacherIdx][slot.day]--;
+
+        if (isSplitBest && secondTchIdxBest !== undefined) {
+          teacherOccupied[secondTchIdxBest][slot.day][slot.period] = false;
+          teacherDailyLessons[secondTchIdxBest][slot.day]--;
+          if (secondRmIdxBest !== undefined && secondRmIdxBest !== roomIdx) {
+            roomOccupied[secondRmIdxBest][slot.day][slot.period] = false;
+          }
+        }
+
         const cur = classDaySubjectCount.get(subDayKey) || 1;
         if (cur <= 1) classDaySubjectCount.delete(subDayKey);
         else classDaySubjectCount.set(subDayKey, cur - 1);
@@ -881,21 +986,57 @@ export const solveCSP = (
     };
 
     if (backtrack(0)) {
-      let rawEntries = Array.from(assignment.entries()).map(([varId, slot]) => {
+      let rawEntries: ScheduleEntry[] = [];
+      assignment.forEach((slot, varId) => {
         const v = sortedVariables.find((item) => item.id === varId)!;
         const isKelajak =
           v.subjectId === 'kelajak-darsi' ||
           problem.subjects.get(v.subjectId)?.name.toLowerCase().includes('kelajak');
-        return {
-          id: `entry_${varId}`,
-          classId: v.classId,
-          subjectId: v.subjectId,
-          teacherId: v.teacherId,
-          classroomId: slot.roomId,
-          day: slot.day,
-          period: slot.period,
-          isLocked: isKelajak ? true : v.isPinned || false,
-        };
+
+        if (v.isSplit && v.secondTeacherId) {
+          const splitId = `split_${varId}`;
+          const isBoysGirls = v.splitType !== 'subgroups';
+
+          // Group 1 / Boys
+          rawEntries.push({
+            id: `entry_${varId}_1`,
+            classId: v.classId,
+            subjectId: v.subjectId,
+            teacherId: v.teacherId,
+            classroomId: slot.roomId,
+            day: slot.day,
+            period: slot.period,
+            isLocked: isKelajak ? true : v.isPinned || false,
+            subgroup: isBoysGirls ? 'boys' : 'group1',
+            splitGroupId: splitId,
+          });
+
+          // Group 2 / Girls
+          rawEntries.push({
+            id: `entry_${varId}_2`,
+            classId: v.classId,
+            subjectId: v.subjectId,
+            teacherId: v.secondTeacherId,
+            classroomId: slot.secondRoomId || slot.roomId,
+            day: slot.day,
+            period: slot.period,
+            isLocked: isKelajak ? true : v.isPinned || false,
+            subgroup: isBoysGirls ? 'girls' : 'group2',
+            splitGroupId: splitId,
+          });
+        } else {
+          rawEntries.push({
+            id: `entry_${varId}`,
+            classId: v.classId,
+            subjectId: v.subjectId,
+            teacherId: v.teacherId,
+            classroomId: slot.roomId,
+            day: slot.day,
+            period: slot.period,
+            isLocked: isKelajak ? true : v.isPinned || false,
+            subgroup: 'all',
+          });
+        }
       });
 
       // Strictly compact every class schedule so it starts at Period 1 and has 0 gaps/holes

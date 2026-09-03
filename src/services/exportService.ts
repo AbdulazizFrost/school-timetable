@@ -74,12 +74,26 @@ export const exportService = {
             row.push('—');
             return;
           }
-          const entry = schedule.entries.find((e) => e.classId === cls.id && e.day === day && e.period === p);
-          if (entry) {
+          const slotEntries = schedule.entries.filter((e) => e.classId === cls.id && e.day === day && e.period === p);
+          if (slotEntries.length > 1) {
+            const textLines = slotEntries.map((entry) => {
+              const sub = subjectMap.get(entry.subjectId)?.name || 'Dars';
+              const grp = entry.subgroup === 'boys' ? (language === 'uz' ? "O'g'il" : 'Мальч.') :
+                          entry.subgroup === 'girls' ? (language === 'uz' ? 'Qiz' : 'Дев.') :
+                          entry.subgroup === 'group1' ? '1-gur.' :
+                          entry.subgroup === 'group2' ? '2-gur.' : '';
+              const tch = teacherMap.get(entry.teacherId)?.shortName || teacherMap.get(entry.teacherId)?.fullName || '';
+              const rm = roomMap.get(entry.classroomId)?.roomNumber || '';
+              return `${sub} [${grp}]: ${tch}${rm ? `, x.${rm}` : ''}`;
+            });
+            row.push(textLines.join('\n'));
+          } else if (slotEntries.length === 1) {
+            const entry = slotEntries[0];
             const sub = subjectMap.get(entry.subjectId)?.name || 'Dars';
+            const grp = entry.subgroup && entry.subgroup !== 'all' ? ` [${entry.subgroup === 'boys' ? 'M' : 'D'}]` : '';
             const tch = teacherMap.get(entry.teacherId)?.shortName || teacherMap.get(entry.teacherId)?.fullName || '';
             const rm = roomMap.get(entry.classroomId)?.roomNumber || '';
-            row.push(`${sub}\n(${tch}${rm ? `, x.${rm}` : ''})`);
+            row.push(`${sub}${grp}\n(${tch}${rm ? `, x.${rm}` : ''})`);
           } else {
             row.push('');
           }
@@ -125,9 +139,13 @@ export const exportService = {
           const entry = schedule.entries.find((e) => e.teacherId === tch.id && e.day === day && e.period === p);
           if (entry) {
             const cls = classMap.get(entry.classId)?.name || 'Sinf';
+            const grp = entry.subgroup === 'boys' ? (language === 'uz' ? " (O'g'il)" : ' (Мальч.)') :
+                        entry.subgroup === 'girls' ? (language === 'uz' ? ' (Qiz)' : ' (Дев.)') :
+                        entry.subgroup === 'group1' ? ' (1-gur.)' :
+                        entry.subgroup === 'group2' ? ' (2-gur.)' : '';
             const sub = subjectMap.get(entry.subjectId)?.shortName || subjectMap.get(entry.subjectId)?.name || 'Fan';
             const rm = roomMap.get(entry.classroomId)?.roomNumber || '';
-            row.push(`${cls}: ${sub} (${rm ? `x.${rm}` : ''})`);
+            row.push(`${cls}${grp}: ${sub} (${rm ? `x.${rm}` : ''})`);
           } else {
             row.push('');
           }
@@ -309,11 +327,44 @@ export const exportService = {
                               return `<td style="border: 1.5px solid #cbd5e1; text-align: center; color: #cbd5e1; font-weight: bold;">—</td>`;
                             }
 
-                            const entry = classEntries.find((e) => e.day === d && e.period === p);
-                            if (!entry) {
+                            const slotEntries = classEntries.filter((e) => e.day === d && e.period === p);
+                            if (slotEntries.length === 0) {
                               return `<td style="border: 1.5px solid #cbd5e1; text-align: center; color: #e2e8f0; font-weight: bold;">—</td>`;
                             }
 
+                            if (slotEntries.length > 1) {
+                              const firstSub = subjectMap.get(slotEntries[0].subjectId);
+                              return `
+                              <td style="border: 1.5px solid #cbd5e1; padding: 3px 4px; text-align: center; vertical-align: middle;">
+                                <div style="font-weight: 800; font-size: 11.5px; color: #0f172a; line-height: 1.15; margin-bottom: 2px;">
+                                  ${firstSub?.name || 'Dars'}
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                  ${slotEntries
+                                    .map((ent) => {
+                                      const t = teacherMap.get(ent.teacherId);
+                                      const r = roomMap.get(ent.classroomId);
+                                      const isBoys = ent.subgroup === 'boys';
+                                      const grp = isBoys
+                                        ? (isUz ? "♂ O'g'il" : '♂ Мальч.')
+                                        : ent.subgroup === 'girls'
+                                        ? (isUz ? '♀ Qiz' : '♀ Дев.')
+                                        : ent.subgroup || 'Guruh';
+                                      return `
+                                      <div style="background: ${isBoys ? '#eff6ff' : '#fdf2f8'}; border: 1px solid ${isBoys ? '#bfdbfe' : '#fbcfe8'}; border-radius: 4px; padding: 1.5px 3px; font-size: 9px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 800; color: ${isBoys ? '#1d4ed8' : '#be185d'};">${grp}</span>
+                                        <span style="color: #1e293b; font-weight: 600; margin-left: 2px;">${t?.shortName || t?.fullName || ''}</span>
+                                        ${r?.roomNumber ? `<span style="font-size: 8px; color: #64748b;">x.${r.roomNumber}</span>` : ''}
+                                      </div>
+                                    `;
+                                    })
+                                    .join('')}
+                                </div>
+                              </td>
+                            `;
+                            }
+
+                            const entry = slotEntries[0];
                             const sub = subjectMap.get(entry.subjectId);
                             const tch = teacherMap.get(entry.teacherId);
                             const rm = roomMap.get(entry.classroomId);
@@ -453,10 +504,15 @@ export const exportService = {
                             const sub = subjectMap.get(entry.subjectId);
                             const rm = roomMap.get(entry.classroomId);
 
+                            const grp = entry.subgroup === 'boys' ? (isUz ? " (O'g'il)" : ' (Мальч.)') :
+                                        entry.subgroup === 'girls' ? (isUz ? ' (Qiz)' : ' (Дев.)') :
+                                        entry.subgroup === 'group1' ? ' (1-gur.)' :
+                                        entry.subgroup === 'group2' ? ' (2-gur.)' : '';
+
                             return `
                             <td style="border: 1.5px solid #cbd5e1; padding: 6px 8px; text-align: center; vertical-align: middle;">
                               <div style="display: inline-block; background: #0f172a; color: #ffffff; font-weight: 800; font-size: 11.5px; padding: 2px 8px; border-radius: 4px; margin-bottom: 3px;">
-                                ${cls?.name || 'Sinf'}
+                                ${cls?.name || 'Sinf'}${grp}
                               </div>
                               <div style="font-weight: 800; font-size: 12.5px; color: #0f172a; line-height: 1.2;">
                                 ${sub?.name || 'Dars'}

@@ -1,14 +1,19 @@
 import React from 'react';
-import { AlertCircle, Lock, Unlock, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { AlertCircle, Lock, Unlock, Edit2, Trash2, Users } from 'lucide-react';
 import { Classroom, SchoolClass, Subject, Teacher } from '../../types';
 import { ScheduleEntry } from '../../types/schedule';
 import { getContrastTextColor } from '../../utils/colorUtils';
+import { useSchoolStore } from '../../store/useSchoolStore';
 
 export interface ScheduleCellProps {
   entry?: ScheduleEntry | null;
+  secondEntry?: ScheduleEntry | null;
   subject?: Subject | null;
+  secondSubject?: Subject | null;
   teacher?: Teacher | null;
+  secondTeacher?: Teacher | null;
   room?: Classroom | null;
+  secondRoom?: Classroom | null;
   cls?: SchoolClass | null;
   day: number;
   period: number;
@@ -27,9 +32,13 @@ export interface ScheduleCellProps {
 
 export const ScheduleCell: React.FC<ScheduleCellProps> = ({
   entry,
+  secondEntry,
   subject,
+  secondSubject,
   teacher,
+  secondTeacher,
   room,
+  secondRoom,
   cls,
   day,
   period,
@@ -45,6 +54,7 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
   onDragOver,
   onDrop,
 }) => {
+  const { language } = useSchoolStore();
   const [dragOverActive, setDragOverActive] = React.useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -83,6 +93,7 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
     );
   }
 
+  const isSplitPair = !!secondEntry;
   const isKelajak =
     entry.subjectId === 'kelajak-darsi' ||
     entry.subjectId.toLowerCase().includes('kelajak') ||
@@ -117,6 +128,8 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
           ? `КОНФЛИКТ: ${conflictMessage}`
           : isKelajak
           ? `🔒 Kelajak darsi: зафиксирован каждый понедельник на 1-м уроке • ${teacher?.fullName || 'Учитель'}`
+          : isSplitPair
+          ? `${subject?.name || 'Урок'} (Деление на подгруппы): 1) ${teacher?.fullName || 'Учитель 1'}, 2) ${secondTeacher?.fullName || 'Учитель 2'}`
           : `${subject?.name || 'Предмет'} • ${teacher?.fullName || 'Учитель'} • ${room?.name || 'Кабинет'}`
       }
     >
@@ -124,13 +137,27 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
       <div className="flex items-start justify-between gap-1">
         <div className="overflow-hidden">
           {showClassName && cls && (
-            <span className="inline-block font-black text-[10px] uppercase tracking-wider opacity-90 leading-tight">
-              {cls.name}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="font-black text-[10px] uppercase tracking-wider opacity-90 leading-tight">
+                {cls.name}
+              </span>
+              {entry.subgroup && entry.subgroup !== 'all' && (
+                <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-black/25 leading-tight">
+                  {entry.subgroup === 'boys' ? (language === 'uz' ? '♂ O‘g‘il' : '♂ Мальчики') :
+                   entry.subgroup === 'girls' ? (language === 'uz' ? '♀ Qiz' : '♀ Девочки') :
+                   entry.subgroup === 'group1' ? '1-gur.' : '2-gur.'}
+                </span>
+              )}
+            </div>
           )}
           <h4 className="font-bold text-xs leading-tight truncate flex items-center gap-1">
             {isKelajak && <span>🔒</span>}
             <span>{subject?.name || 'Урок'}</span>
+            {isSplitPair && (
+              <span className="text-[9px] bg-black/20 px-1 py-0.5 rounded font-normal shrink-0">
+                👥 2 {language === 'uz' ? 'guruh' : 'подгр.'}
+              </span>
+            )}
           </h4>
         </div>
 
@@ -151,6 +178,7 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleLock && onToggleLock(entry.id);
+                  if (secondEntry && onToggleLock) onToggleLock(secondEntry.id);
                 }}
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-black/20 cursor-pointer"
                 title={entry.isLocked ? 'Разблокировать урок' : 'Зафиксировать урок (запретить авто-перенос)'}
@@ -169,15 +197,42 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
         </div>
       </div>
 
-      {/* Bottom row: Teacher & Room */}
-      <div className="pt-1 flex items-end justify-between text-[11px] opacity-90 leading-tight">
-        <span className="truncate max-w-[110px]" title={teacher?.fullName}>
-          {teacher?.shortName || teacher?.fullName || 'Преподаватель'}
-        </span>
-        <span className="font-semibold shrink-0 ml-1 text-[10px] bg-black/15 px-1.5 py-0.5 rounded">
-          {room?.roomNumber ? `к. ${room.roomNumber}` : '—'}
-        </span>
-      </div>
+      {/* Split subgroup cards or normal bottom row */}
+      {isSplitPair ? (
+        <div className="mt-1 space-y-1">
+          {/* Subgroup 1 (Boys / Group 1) */}
+          <div className="bg-black/15 dark:bg-black/25 rounded-md px-1.5 py-0.5 text-[10px] leading-tight">
+            <div className="flex items-center justify-between font-bold">
+              <span className="text-blue-100">
+                {entry.subgroup === 'boys' ? (language === 'uz' ? '♂ O‘g‘il bolalar' : '♂ Мальчики') : (entry.subgroup || '1-guruh')}
+              </span>
+              <span className="text-[9px] opacity-80">{room?.roomNumber ? `к. ${room.roomNumber}` : ''}</span>
+            </div>
+            <div className="truncate opacity-90 text-[10px]">{teacher?.shortName || teacher?.fullName || 'Преподаватель 1'}</div>
+          </div>
+
+          {/* Subgroup 2 (Girls / Group 2) */}
+          <div className="bg-black/15 dark:bg-black/25 rounded-md px-1.5 py-0.5 text-[10px] leading-tight">
+            <div className="flex items-center justify-between font-bold">
+              <span className="text-rose-100">
+                {secondEntry.subgroup === 'girls' ? (language === 'uz' ? '♀ Qiz bolalar' : '♀ Девочки') : (secondEntry.subgroup || '2-guruh')}
+              </span>
+              <span className="text-[9px] opacity-80">{secondRoom?.roomNumber ? `к. ${secondRoom.roomNumber}` : ''}</span>
+            </div>
+            <div className="truncate opacity-90 text-[10px]">{secondTeacher?.shortName || secondTeacher?.fullName || 'Преподаватель 2'}</div>
+          </div>
+        </div>
+      ) : (
+        /* Standard Bottom row: Teacher & Room */
+        <div className="pt-1 flex items-end justify-between text-[11px] opacity-90 leading-tight">
+          <span className="truncate max-w-[110px]" title={teacher?.fullName}>
+            {teacher?.shortName || teacher?.fullName || 'Преподаватель'}
+          </span>
+          <span className="font-semibold shrink-0 ml-1 text-[10px] bg-black/15 px-1.5 py-0.5 rounded">
+            {room?.roomNumber ? `к. ${room.roomNumber}` : '—'}
+          </span>
+        </div>
+      )}
 
       {/* Hover action menu trigger */}
       <div className="absolute top-1 right-1 hidden group-hover:flex items-center gap-0.5 bg-black/40 rounded-lg p-0.5 backdrop-blur-xs">
@@ -197,6 +252,7 @@ export const ScheduleCell: React.FC<ScheduleCellProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             onDelete && onDelete(entry.id);
+            if (secondEntry && onDelete) onDelete(secondEntry.id);
           }}
           className="p-1 hover:bg-rose-500/80 rounded cursor-pointer"
           title="Удалить урок"
